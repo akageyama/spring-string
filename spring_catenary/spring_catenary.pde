@@ -12,15 +12,11 @@
  
  */
 
-float time = 0.0;
-int step = 0;
-float dt = 0.005;
+boolean RunningStateToggle = true;
 
-boolean running_state_toggle = true;
-
-final float ROPE_MASS = 1.0;
+final float ROPE_MASS = 0.01;
 final float ROPE_LENGTH = 1.0;
-final int BALLS_NUM = 10;
+final int BALLS_NUM = 50;
 //
 //         when BALLS_NUM = 6
 //         ......o............o........
@@ -33,10 +29,13 @@ final int BALLS_NUM = 10;
 final float BALLS_MASS = ROPE_MASS / (BALLS_NUM-2);
 
 final float SPRING_NATURAL_LENGTH = ROPE_LENGTH / (BALLS_NUM-1);
-//final float SPRING_NATURAL_LENGTH = 0.5;
-//final float SPRING_CONST = BALLS_MASS; 
-//// to keep the characteristic time scale O(1).
-final float SPRING_CONST = 100.0; 
+final float SPRING_CHAR_PERIOD = 0.06; // second
+final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
+final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
+      // omega^2 = k/m
+final float SPRING_CONST = BALLS_MASS * SPRING_CHAR_OMEGA_SQ; 
+// to keep the characteristic time scale O(1).
+// final float SPRING_CONST = 100.0; 
 
 final float GRAVITY_ACCELERATION = 9.80665;  
 
@@ -44,15 +43,19 @@ float[] ballsCoord = new float[BALLS_NUM*4]; // (x,y,vx,vy)
 
 float xmin = -1.0;
 float xmax =  1.0;
-float ymin = -1.5;
-float ymax =  1.5;
+float ymin = -1.8;
+float ymax =  0.2;
 
+
+float time = 0.0;
+int step = 0;
+float dt = SPRING_CHAR_PERIOD*0.05;
 
 
 
 void initialize()
 {
-  float footPointSeparation = ROPE_LENGTH * 0.75;
+  float footPointSeparation = ROPE_LENGTH * 0.8;
 //
 //          LeftX              RightX
 //             |                  |
@@ -125,7 +128,7 @@ void initialize()
 
 
 void setup() {
-  size(600, 600);
+  size(500, 500);
   background(255);
   initialize();
   frameRate(60);
@@ -214,24 +217,30 @@ void equationOfMotion(float q[], float dq[], float dt)
     float dist01 = dist(x0,y0,x1,y1);
     float dist12 = dist(x1,y1,x2,y2);
 
-
-    float forceAmp01 = SPRING_CONST*(dist01-l0);
-    float forceAmp12 = SPRING_CONST*(dist12-l0);
+    float s_forceAmp01 = SPRING_CONST*(dist01-l0);
+    float s_forceAmp12 = SPRING_CONST*(dist12-l0);
     
     float unitVec01x = (x1-x0)/dist01;
     float unitVec01y = (y1-y0)/dist01;
     float unitVec12x = (x2-x1)/dist12;
     float unitVec12y = (y2-y1)/dist12;
-    float force01x = forceAmp01*unitVec01x;
-    float force01y = forceAmp01*unitVec01y;
-    float force12x = forceAmp12*unitVec12x;
-    float force12y = forceAmp12*unitVec12y;
+    float s_force01x = s_forceAmp01*unitVec01x;
+    float s_force01y = s_forceAmp01*unitVec01y;
+    float s_force12x = s_forceAmp12*unitVec12x;
+    float s_force12y = s_forceAmp12*unitVec12y;
+    float  g_force_y = - BALLS_MASS*GRAVITY_ACCELERATION;
+    
+    float v_force_x = -0.001*q[4*i+2];
+    float v_force_y = -0.001*q[4*i+3];
+    
+    float force_x = s_force12x - s_force01x + v_force_x;
+    float force_y = s_force12y - s_force01y + v_force_y + g_force_y;
 
     dq[4*i+0] = ( q[4*i+2] ) * dt; // dx = vx * dt
     dq[4*i+1] = ( q[4*i+3] ) * dt; // dy = vy * dt
-    dq[4*i+2] = ( force12x - force01x ) / BALLS_MASS * dt; // dvx = (fx/m)*dt 
-    dq[4*i+3] = ( force12y - force01y ) / BALLS_MASS * dt
-                              - GRAVITY_ACCELERATION * dt; // dvy = (fy/m- g)*dt
+    dq[4*i+2] = ( force_x ) / BALLS_MASS * dt; // dvx = (fx/m)*dt 
+    dq[4*i+3] = ( force_y ) / BALLS_MASS * dt;
+                                 // dvy = (fy/m- g)*dt
   }
 }
 
@@ -299,7 +308,7 @@ float mapx(float x) {
 float mapy(float y) {
   // (x,y) = physical unit coords. 
   // (map(x),map(y)) = pixel coords.
-  float scale = width/(ymax-ymin);
+  float scale = height/(ymax-ymin);
   return map(y, ymin, ymax, scale*ymin, scale*ymax);
 }
 
@@ -312,7 +321,10 @@ void drawText() {
 }
 
 
-
+void drawHorizontalLine() {
+  stroke(200,0,200);
+  line(mapx(xmin), mapy(0), mapx(xmax), mapy(0));
+}
 
 
 
@@ -329,7 +341,7 @@ void drawRope() {
     line(mapx(x0), mapy(y0), mapx(x1), mapy(y1));
   }
 
-  for (int i=1; i<=nb-2; i++) {
+  for (int i=0; i<nb; i++) {
     float x = ballsCoord[4*i+0];
     float y = ballsCoord[4*i+1];
     ellipse(mapx(x), mapy(y), 5, 5);
@@ -341,17 +353,18 @@ void draw() {
   background(255);
   stroke(0, 0, 255);
 
-  translate(width/2, height/2);
+  translate(width/2, height*ymax/(ymax-ymin));
   scale(1, -1);
 
   drawRope();
+  drawHorizontalLine();
 
   if ( keyPressed ) {
     if ( key == 's' ) {
-      running_state_toggle = !running_state_toggle;
+      RunningStateToggle = !RunningStateToggle;
     }
   }
-  if ( running_state_toggle ) {
+  if ( RunningStateToggle ) {
     rungeKutta4();
     time += dt;
     step += 1;
@@ -363,5 +376,5 @@ void draw() {
 }
 
 void mousePressed() {
-  running_state_toggle = !running_state_toggle;
+  RunningStateToggle = !RunningStateToggle;
 }
