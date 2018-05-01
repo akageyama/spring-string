@@ -292,6 +292,7 @@ void rungeKutta4()
       );
   }
 
+  ballsCoord[(NB-1)*4+0] += 0.001*sin(SPRING_CHAR_OMEGA*time);
 }
 
 
