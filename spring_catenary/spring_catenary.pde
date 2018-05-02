@@ -17,8 +17,8 @@ boolean RunningStateToggle = true;
 boolean shakeFlag = false;
 
 final float ROPE_MASS = 0.005;
-final float ROPE_LENGTH = 1.0;
-final int BALLS_NUM = 100;
+final float ROPE_LENGTH = 2.0;
+final int BALLS_NUM = 50;
 //
 //         when BALLS_NUM = 6
 //         ......o............o........
@@ -31,7 +31,7 @@ final int BALLS_NUM = 100;
 final float BALLS_MASS = ROPE_MASS / (BALLS_NUM-2);
 
 final float SPRING_NATURAL_LENGTH = ROPE_LENGTH / (BALLS_NUM-1);
-final float SPRING_CHAR_PERIOD = 0.03; // second
+final float SPRING_CHAR_PERIOD = 0.01; // second
 final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
 final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
       // omega^2 = k/m
@@ -45,8 +45,8 @@ float[] ballsCoord = new float[BALLS_NUM*4]; // (x,y,vx,vy)
 
 float xmin = -1.0;
 float xmax =  1.0;
-float ymin = -1.8;
-float ymax =  0.2;
+float ymin = -1.5;
+float ymax =  0.5;
 
 
 float time = 0.0;
@@ -57,7 +57,7 @@ float dt = SPRING_CHAR_PERIOD*0.05;
 
 void initialize()
 {
-  float footPointSeparation = ROPE_LENGTH * 0.8;
+  float footPointSeparation = ROPE_LENGTH * 0.7;
 //
 //          LeftX              RightX
 //             |                  |
@@ -297,7 +297,7 @@ void rungeKutta4()
   }
 
   if ( shakeFlag ) {
-    ballsCoord[(NB-1)*4+0] += 0.002*sin(0.5*SPRING_CHAR_OMEGA*time);
+    ballsCoord[(NB-1)*4+0] += 0.001*sin(0.1*SPRING_CHAR_OMEGA*time);
   }
 }
 
@@ -372,14 +372,17 @@ void draw() {
     }
     if ( key == 't' ) {
       shakeFlag = !shakeFlag;
+      delay(10);
     }
   }
   if ( RunningStateToggle ) {
-    rungeKutta4();
-    time += dt;
-    step += 1;
-    if ( step%10 == 0 ) {
-      println("step = ", step, " time = ", time, " energy = ", totalEnergy());
+    for (int n=0; n<20; n++) { // to speed up the display
+      rungeKutta4();
+      time += dt;
+      step += 1;
+      if ( step%10 == 0 ) {
+        println("step=", step, " time=", time, " energy=", totalEnergy()," shake=",shakeFlag);
+      }
     }
   }
   drawText();
