@@ -14,7 +14,7 @@
 
 boolean RunningStateToggle = true;
 
-boolean shakeFlag = false;
+boolean shakeFlag = true;
 
 final float ROPE_MASS = 0.005;
 final float ROPE_LENGTH = 2.0;
@@ -36,12 +36,25 @@ final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
 final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
       // omega^2 = k/m
 final float SPRING_CONST = BALLS_MASS * SPRING_CHAR_OMEGA_SQ; 
-// to keep the characteristic time scale O(1).
-// final float SPRING_CONST = 100.0; 
 
 final float GRAVITY_ACCELERATION = 9.80665;  
 
 float[] ballsCoord = new float[BALLS_NUM*4]; // (x,y,vx,vy)
+
+
+//
+//          LeftX              RightX
+//             |                  |
+//             |<---separation--->|
+//             |         |        |
+//       ......o..................o........
+//            0 \        |       / BALLS_NUM-1
+//               o      x=0     o
+//              1 \            / BALLS_NUM-2
+//   
+float footPointSeparation = ROPE_LENGTH * 0.5;
+float footPointRightX = footPointSeparation/2;
+float footPointLeftX = -footPointRightX;
 
 float xmin = -1.0;
 float xmax =  1.0;
@@ -57,19 +70,7 @@ float dt = SPRING_CHAR_PERIOD*0.05;
 
 void initialize()
 {
-  float footPointSeparation = ROPE_LENGTH * 0.7;
-//
-//          LeftX              RightX
-//             |                  |
-//             |<---separation--->|
-//             |         |        |
-//       ......o..................o........
-//            0 \        |       / BALLS_NUM-1
-//               o      x=0     o
-//              1 \            / BALLS_NUM-2
-//   
-  float footPointRightX = footPointSeparation/2;
-  float footPointLeftX = -footPointRightX;
+
 
 //
 //           angle
@@ -167,9 +168,9 @@ float totalEnergy()
 }
 
 
-void rungeKutta4Advance(float[] p, float[] p1, float[] dp, float factor)
+void rungeKutta4Advance(int num, float[] p, float[] p1, float[] dp, float factor)
 {
-  for (int j=0; j<BALLS_NUM*4; j++) {
+  for (int j=0; j<num; j++) {
     p[j] = p1[j] + factor*dp[j];
   }
 }
@@ -192,12 +193,8 @@ void equationOfMotion(float q[], float dq[], float dt)
 //            2      3
 //   
 
-  for (int k=0; k<4; k++) {
-    dq[4*0     +k] = 0.0;  // Ball i=1 is fixed.
-    dq[4*(NB-1)+k] = 0.0;  // Ball i=NB-1 is also fixed.
-  }
-
-  for (int i=1; i<=NB-2; i++) {
+  
+  for (int i=1; i<=NB-2; i++) {  // See boundaryCondition() for i=0 & NB-1.   
     // 
     //     (x0,y0)          (x1,y1)
     //         i-1           i
@@ -232,10 +229,9 @@ void equationOfMotion(float q[], float dq[], float dt)
     float s_force12y = s_forceAmp12*unitVec12y;
     float  g_force_y = - BALLS_MASS*GRAVITY_ACCELERATION;
     
-    float v_force_x = -0.0001*q[4*i+2];
-    float v_force_y = -0.0001*q[4*i+3];
-//    float v_force_x = 0;
-//    float v_force_y = 0;
+    float frictionCoeff = 0.0001;
+    float v_force_x = -frictionCoeff*q[4*i+2];
+    float v_force_y = -frictionCoeff*q[4*i+3];
     
     float force_x = s_force12x - s_force01x + v_force_x;
     float force_y = s_force12y - s_force01y + v_force_y + g_force_y;
@@ -247,8 +243,6 @@ void equationOfMotion(float q[], float dq[], float dt)
                                  // dvy = (fy/m- g)*dt
   }
 }
-
-
 
 
 
@@ -272,22 +266,21 @@ void rungeKutta4()
 
   //step 1
   equationOfMotion(qprev, dq1, dt);
-  rungeKutta4Advance(qwork, qprev, dq1, 0.5);
+  rungeKutta4Advance(NB4, qwork, qprev, dq1, 0.5);
 
   //step 2
   equationOfMotion(qwork, dq2, dt);
-  rungeKutta4Advance(qwork, qprev, dq2, 0.5);
+  rungeKutta4Advance(NB4, qwork, qprev, dq2, 0.5);
 
   //step 3
   equationOfMotion(qwork, dq3, dt);
-  rungeKutta4Advance(qwork, qprev, dq3, 1.0);
+  rungeKutta4Advance(NB4, qwork, qprev, dq3, 1.0);
 
   //step 4
   equationOfMotion(qwork, dq4, dt);
 
   //the result
-
-  for (int j=0; j<NB*4; j++) {
+  for (int j=1; j<(NB-1)*4; j++) { // See boundaryCondition() for i=0 & NB-1.
     ballsCoord[j] = qprev[j] + (
       ONE_SIXTH*dq1[j]
       + ONE_THIRD*dq2[j]
@@ -296,12 +289,22 @@ void rungeKutta4()
       );
   }
 
-  if ( shakeFlag ) {
-    ballsCoord[(NB-1)*4+0] += 0.001*sin(0.1*SPRING_CHAR_OMEGA*time);
-  }
+
 }
 
 
+void boundaryCondition() {
+  ballsCoord[            0*4+0] = footPointLeftX;   // x-coord if particle No.0.
+  ballsCoord[            0*4+1] = 0.0;              // y-coord if particle No.0.
+  ballsCoord[(BALLS_NUM-1)*4+0] = footPointRightX;  // x-coord if the last particle.
+  ballsCoord[(BALLS_NUM-1)*4+1] = 0.0;              // y-coord if the last particle.
+  if ( shakeFlag ) {
+    float amp = SPRING_NATURAL_LENGTH*0.06;
+    float omega = 0.80*SPRING_CHAR_OMEGA;
+    ballsCoord[(          0)*4+0] += amp*sin(omega*time);
+    ballsCoord[(BALLS_NUM-1)*4+0] += amp*sin(omega*time);
+  }
+}
 
 
 float mapx(float x) {
@@ -324,7 +327,14 @@ float mapy(float y) {
 void drawText() {
   fill(0, 0, 0);
   scale(1, -1);
-  text("Click to\nstart/stop.", -mapx(xmax*0.98), -mapx(xmax*0.1));
+  if (shakeFlag) {
+    text("Shaing the end points. Click to\nstart/stop the shake.", 
+          -mapx(xmax*0.98), -mapy(ymax*0.4));
+  }
+  else {
+    text("No shaing. Click to\nstart/stop the shake.", 
+          -mapx(xmax*0.98), -mapy(ymax*0.4));
+  }
 }
 
 
@@ -368,16 +378,14 @@ void draw() {
 
   if ( keyPressed ) {
     if ( key == 's' ) {
-      RunningStateToggle = !RunningStateToggle;
-    }
-    if ( key == 't' ) {
+      // RunningStateToggle = !RunningStateToggle;
       shakeFlag = !shakeFlag;
-      delay(10);
     }
   }
   if ( RunningStateToggle ) {
     for (int n=0; n<20; n++) { // to speed up the display
       rungeKutta4();
+      boundaryCondition();
       time += dt;
       step += 1;
       if ( step%10 == 0 ) {
@@ -389,5 +397,6 @@ void draw() {
 }
 
 void mousePressed() {
-  RunningStateToggle = !RunningStateToggle;
+  // RunningStateToggle = !RunningStateToggle;
+  shakeFlag = !shakeFlag;
 }
