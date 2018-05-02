@@ -14,9 +14,11 @@
 
 boolean RunningStateToggle = true;
 
-final float ROPE_MASS = 0.01;
+boolean shakeFlag = false;
+
+final float ROPE_MASS = 0.005;
 final float ROPE_LENGTH = 1.0;
-final int BALLS_NUM = 50;
+final int BALLS_NUM = 100;
 //
 //         when BALLS_NUM = 6
 //         ......o............o........
@@ -29,7 +31,7 @@ final int BALLS_NUM = 50;
 final float BALLS_MASS = ROPE_MASS / (BALLS_NUM-2);
 
 final float SPRING_NATURAL_LENGTH = ROPE_LENGTH / (BALLS_NUM-1);
-final float SPRING_CHAR_PERIOD = 0.06; // second
+final float SPRING_CHAR_PERIOD = 0.03; // second
 final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
 final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
       // omega^2 = k/m
@@ -230,8 +232,10 @@ void equationOfMotion(float q[], float dq[], float dt)
     float s_force12y = s_forceAmp12*unitVec12y;
     float  g_force_y = - BALLS_MASS*GRAVITY_ACCELERATION;
     
-    float v_force_x = -0.001*q[4*i+2];
-    float v_force_y = -0.001*q[4*i+3];
+    float v_force_x = -0.0001*q[4*i+2];
+    float v_force_y = -0.0001*q[4*i+3];
+//    float v_force_x = 0;
+//    float v_force_y = 0;
     
     float force_x = s_force12x - s_force01x + v_force_x;
     float force_y = s_force12y - s_force01y + v_force_y + g_force_y;
@@ -292,7 +296,9 @@ void rungeKutta4()
       );
   }
 
-  ballsCoord[(NB-1)*4+0] += 0.001*sin(SPRING_CHAR_OMEGA*time);
+  if ( shakeFlag ) {
+    ballsCoord[(NB-1)*4+0] += 0.002*sin(0.5*SPRING_CHAR_OMEGA*time);
+  }
 }
 
 
@@ -363,6 +369,9 @@ void draw() {
   if ( keyPressed ) {
     if ( key == 's' ) {
       RunningStateToggle = !RunningStateToggle;
+    }
+    if ( key == 't' ) {
+      shakeFlag = !shakeFlag;
     }
   }
   if ( RunningStateToggle ) {
