@@ -21,10 +21,13 @@
 float time = 0.0;
 int step = 0;
 
+final int N_TRIANGLES = 6;
+final float EDGE_LENGTH = 0.3;
+final float MASS = 0.1;
 final float SPRING_CHAR_PERIOD = 0.1; // second
 
 // float dt = 0.0001;
-float dt = SPRING_CHAR_PERIOD*0.01;
+float dt = SPRING_CHAR_PERIOD*0.1;
 
 float x_coord_min = -3.0;
 float x_coord_max =  3.0;
@@ -98,6 +101,21 @@ class Vec3 {
   }
 }
 
+class Util
+{
+  Util() 
+  {
+  }
+  
+  
+  float squaredSum(float a, float b, float c)
+  {
+    return a*a+b*b+c*c;
+  }
+}
+
+
+Util util = new Util();
 
 
 void rungeKuttaAdvance(int num, float[] p, float[] p1, float[] dp, float factor)
@@ -108,17 +126,51 @@ void rungeKuttaAdvance(int num, float[] p, float[] p1, float[] dp, float factor)
 }
 
 
+class Spring 
+{
+  final float SPRING_NATURAL_LENGTH = EDGE_LENGTH;
+  final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
+  final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
+                // omega^2 = k/m
+  final float SPRING_CONST = MASS * SPRING_CHAR_OMEGA_SQ;
+
+  Spring() {
+  }
+  
+  float getConst() {
+    return SPRING_CONST;
+  }
+  
+  Vec3 force(float xSelf, float ySelf, float zSelf,
+             float xOther, float yOther, float zOther) {
+    
+    float distance = dist(xSelf,  ySelf,  zSelf,
+                          xOther, yOther, zOther);
+
+    float forceAmp = SPRING_CONST*(distance 
+                                   - SPRING_NATURAL_LENGTH);
+
+    float unitVectX = ( xOther - xSelf ) / distance;                                 
+    float unitVectY = ( yOther - ySelf ) / distance;                                 
+    float unitVectZ = ( zOther - zSelf ) / distance;
+
+    float fx = forceAmp*unitVectX;
+    float fy = forceAmp*unitVectY;
+    float fz = forceAmp*unitVectZ;
+          
+    Vec3 force = new Vec3(fx,fy,fz);
+
+    return force;                        
+  }
+}
+
+Spring spring = new Spring();
+
+
 class ElasticString {
-  final int N_TRIANGLES = 6;
-  final float EDGE_LENGTH = 0.3;
-  final float MASS = 0.1;
   final int N_PARTICLES = N_TRIANGLES*3;
   Vec3[] pos = new Vec3[N_PARTICLES];
   Vec3[] vel = new Vec3[N_PARTICLES];
-
-// test  
-float test_spring_pos = 2.5;
-float test_spring_vel = 0.0;
 
   //        
   //     i=5                       i=4         
@@ -218,12 +270,6 @@ float test_spring_vel = 0.0;
         sphere(3);
       popMatrix();
     }
-// test
-      pushMatrix();
-        translate(mapx(test_spring_pos), mapy(0), mapz(0));      
-        sphere(3);
-      popMatrix();
-
 
 }
   
@@ -237,42 +283,7 @@ float test_spring_vel = 0.0;
       line(ax,ay,az,bx,by,bz);
   }
 
-  
-  Vec3 springForce(float xSelf, float ySelf, float zSelf,
-                   float xOther, float yOther, float zOther) {
-    final float SPRING_NATURAL_LENGTH = EDGE_LENGTH;
-    final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
-    final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
-                // omega^2 = k/m
-    final float SPRING_CONST = MASS * SPRING_CHAR_OMEGA_SQ;
-    
 
-    float distance = dist(xSelf,  ySelf,  zSelf,
-                          xOther, yOther, zOther);
-
-    float forceAmp = SPRING_CONST*(distance 
-                                   - SPRING_NATURAL_LENGTH);
-println("SPRING_CONST=",SPRING_CONST,"dist=",distance,"forceAmp=",forceAmp);
-// debug
-//forceAmp *= 0.01;
-    float unitVectX = ( xOther - xSelf ) / distance;                                 
-    float unitVectY = ( yOther - ySelf ) / distance;                                 
-    float unitVectZ = ( zOther - zSelf ) / distance;
-
-println(" unitV = ", unitVectX, unitVectY, unitVectZ);
-println(" length -f unitVec = ", dist(unitVectX,unitVectY,unitVectZ,0,0,0));
-    float fx = forceAmp*unitVectX;
-    float fy = forceAmp*unitVectY;
-    float fz = forceAmp*unitVectZ;
-          
-    Vec3 force = new Vec3(fx,fy,fz);
-
-// debug 
-println("  element force = ", force.x, force.y, force.z);
-
-    return force;                        
-  }
-    
   void equationOfMotion(float q[], float dq[], float dt) 
   {
     for (int n=1; n<N_TRIANGLES-1; n++) { //  skip the ends.   
@@ -359,15 +370,10 @@ println("  element force = ", force.x, force.y, force.z);
           float xOther = q[6*indexOther+0];
           float yOther = q[6*indexOther+1];
           float zOther = q[6*indexOther+2];
-println(" j = ", j);       
-          Vec3 f = springForce(xSelf,  ySelf,  zSelf,
-                               xOther, yOther, zOther);
-println(" j = ", j, " force, f = ", force.z, f.z);          
+          Vec3 f = spring.force(xSelf,  ySelf,  zSelf,
+                                xOther, yOther, zOther);
           force.add(f);
         }
-
-// debug 
-println("  force = ", force.x, force.y, force.z);
         
         //float frictionCoeff = 0.0001;
         //float v_force_x = -frictionCoeff*q[4*i+2];
@@ -387,20 +393,6 @@ println("  force = ", force.x, force.y, force.z);
     }
   }
   
-  void testEquationOfMotion(float q[], float dq[], float dt) {
-    final float SPRING_NATURAL_LENGTH = EDGE_LENGTH;
-    final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
-    final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
-                // omega^2 = k/m
-    final float SPRING_CONST = MASS * SPRING_CHAR_OMEGA_SQ;
-    
-    float force = - SPRING_CONST*q[0];
-
-    
-        dq[0] = ( q[1] ) * dt; // dx = vx * dt
-        dq[1] = ( force ) / MASS * dt; // dvx = (fx/m)*dt 
-  }
-
 
   void drawSticks() {
     stroke(0, 200, 50);
@@ -480,15 +472,7 @@ println("  force = ", force.x, force.y, force.z);
     float[] dq2 = new float[NN];
     float[] dq3 = new float[NN];
     float[] dq4 = new float[NN];
-    
-// test    
-    float[] testqprev = new float[2];
-    float[] testqwork = new float[2];
-    float[] testdq1 = new float[2];
-    float[] testdq2 = new float[2];
-    float[] testdq3 = new float[2];
-    float[] testdq4 = new float[2];
-  
+      
     for (int n=0; n<N_PARTICLES; n++) {
       qprev[6*n+0] = pos[n].x;
       qprev[6*n+1] = pos[n].y;
@@ -497,36 +481,21 @@ println("  force = ", force.x, force.y, force.z);
       qprev[6*n+4] = vel[n].y;
       qprev[6*n+5] = vel[n].z;
     }
-
-// test   
-    testqprev[0] = test_spring_pos;
-    testqprev[1] = test_spring_vel;
   
     //step 1
     equationOfMotion(qprev, dq1, dt);
     rungeKuttaAdvance(NN, qwork, qprev, dq1, 0.5);
-// test   
-    testEquationOfMotion(testqprev, testdq1, dt);
-    rungeKuttaAdvance(2, testqwork, testqprev, testdq1, 0.5);
   
     //step 2
     equationOfMotion(qwork, dq2, dt);
     rungeKuttaAdvance(NN, qwork, qprev, dq2, 0.5);
-// test   
-    testEquationOfMotion(testqwork, testdq2, dt);
-    rungeKuttaAdvance(2, testqwork, testqprev, testdq2, 0.5);
   
     //step 3
     equationOfMotion(qwork, dq3, dt);
     rungeKuttaAdvance(NN, qwork, qprev, dq3, 1.0);
-// test   
-    testEquationOfMotion(testqwork, testdq3, dt);
-    rungeKuttaAdvance(2, testqwork, testqprev, testdq3, 1.0);
   
     //step 4
     equationOfMotion(qwork, dq4, dt);
-// test   
-    testEquationOfMotion(testqwork, testdq4, dt);
 
   
     //the result
@@ -551,26 +520,29 @@ println("  force = ", force.x, force.y, force.z);
           vel[n].y = newval;
         else if (i==5)
           vel[n].z = newval; 
-      }
-      
+      } 
     }
-  
-          test_spring_pos = testqprev[0] + (
-                                  ONE_SIXTH*testdq1[0]
-                                + ONE_THIRD*testdq2[0]
-                                + ONE_THIRD*testdq3[0]
-                                + ONE_SIXTH*testdq4[0]
-                                );
-
-  
-          test_spring_vel = testqprev[1] + (
-                                  ONE_SIXTH*testdq1[1]
-                                + ONE_THIRD*testdq2[1]
-                                + ONE_THIRD*testdq3[1]
-                                + ONE_SIXTH*testdq4[1]
-                                );
   }
   
+  //float totalEnergy() 
+  //{
+  //  float sum_kinetic = 0.0;
+  //  float sum_potential = 0.0;
+  //  float springc = spring.getConst();
+  //  for (int i=0; i<N_PARTICLES; i++) {
+  //    float posx = pos[i].x;
+  //    float posy = pos[i].y;
+  //    float posz = pos[i].z;
+  //    float velx = vel[i].x;
+  //    float vely = vel[i].y;
+  //    float velz = vel[i].z;
+  //    sum_potential += 0.5*springc*util.squaredSum(
+  //    sum_kinetic += 0.5*MASS*(velx*velx
+  //                            +vely*vely
+  //                            +velz*velz);
+  //  }
+  //  float kinetic = 0.5*MASS*(
+  //}
 }
 
 ElasticString elasticString = new ElasticString();
