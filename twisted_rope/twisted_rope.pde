@@ -20,7 +20,7 @@
 
 float time = 0.0;
 int step = 0;
-float dt = 0.001;
+float dt = 0.0001;
 
 float x_coord_min = -3.0;
 float x_coord_max =  3.0;
@@ -106,21 +106,39 @@ class GeneralCoords {
 
 class Vec3 {
   float x, y, z;
+  
   Vec3(float x, float y, float z) {
     this.x = x;
     this.y = y;
     this.z = z;
   }
+  
+  void add(Vec3 v) {
+    this.x += v.x;
+    this.y += v.y;
+    this.z += v.z;
+  }
 }
 
+
+
+void rungeKuttaAdvance(int num, float[] p, float[] p1, float[] dp, float factor)
+{
+  for (int j=0; j<num; j++) {
+    p[j] = p1[j] + factor*dp[j];
+  }
+}
+
+
 class ElasticString {
-  final int N_TRIANGLES = 2;
+  final int N_TRIANGLES = 4;
   final float EDGE_LENGTH = 0.3;
   final float MASS = 0.01;
   final int N_PARTICLES = N_TRIANGLES*3;
   Vec3[] pos = new Vec3[N_PARTICLES];
+  Vec3[] vel = new Vec3[N_PARTICLES];
   //        
-  //     i=4                      i=5           
+  //     i=5                       i=4         
   //       o x x x x x x x x x x x o
   //         x          i=2      x
   //           x         o     x
@@ -147,14 +165,19 @@ class ElasticString {
     //               .           .
     //  (-a/2,-a/(2*sqrt(3))     (a/2,-a/(2*sqrt(3))
     //        
-    final float V0x = -EDGE_LENGTH/2;
-    final float V0y = -EDGE_LENGTH/(2*sqrt(3));
+    final float C0 = EDGE_LENGTH/2;
+    final float C1 = EDGE_LENGTH/(2*sqrt(3.0));
+    final float C2 = EDGE_LENGTH/sqrt(3);
+    final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
+    
+    final float V0x = -C0;
+    final float V0y = -C1;
     final float V0z =  0;
-    final float V1x =  EDGE_LENGTH/2;
-    final float V1y = -EDGE_LENGTH/(2*sqrt(3));
+    final float V1x =  C0;
+    final float V1y = -C1;
     final float V1z =  0;
     final float V2x =  0;
-    final float V2y =  EDGE_LENGTH/sqrt(3);
+    final float V2y =  C2;
     final float V2z =  0;
     //
     //  (-a/2,a/(2*sqrt(3))     (a/2,a/(2*sqrt(3))
@@ -169,15 +192,15 @@ class ElasticString {
     //                     .
     //                (0,-a/sqrt(3))
     //        
-    final float V3x =  0;
-    final float V3y = -EDGE_LENGTH/sqrt(3);
-    final float V3z =  0.5;
-    final float V4x =  EDGE_LENGTH/2;
-    final float V4y =  EDGE_LENGTH/(2*sqrt(3));
-    final float V4z =  0.5;
-    final float V5x = -EDGE_LENGTH/2;
-    final float V5y =  EDGE_LENGTH/(2*sqrt(3));
-    final float V5z =  0.5;
+    final float V3x =   0;
+    final float V3y = -C2;
+    final float V3z =  C3;
+    final float V4x =  C0;
+    final float V4y =  C1;
+    final float V4z =  C3;
+    final float V5x = -C0;
+    final float V5y =  C1;
+    final float V5z =  C3;
     
     for (int n=0; n<N_TRIANGLES; n++) {
       if ( n%2==0 ) {
@@ -190,10 +213,17 @@ class ElasticString {
         pos[3*n+1] = new Vec3(V4x,V4y,V4z); 
         pos[3*n+2] = new Vec3(V5x,V5y,V5z); 
       }
+      for (int i=0; i<3; i++) { // shift in z-direction.
+        pos[3*n+i].z += 2*C3*(n/2);
+      }
+    }
+    
+    for (int i=0; i<N_PARTICLES; i++) {
+      vel[i] = new Vec3(0.0, 0.0, 0.0);
     }
   }
   
-  void placeBalls() {
+  void drawBalls() {
     noStroke();
     fill(100,0,130);
     for (int i=0; i<N_PARTICLES; i++) {
@@ -202,10 +232,286 @@ class ElasticString {
         float y = pos[i].y;
         float z = pos[i].z;
         translate(mapx(x), mapy(y), mapz(z));      
-        sphere(10);
+        sphere(3);
       popMatrix();
     }
   }
+  
+  void drawSticksElement(Vec3 a, Vec3 b) {
+      float ax = mapx(a.x);
+      float ay = mapy(a.y);
+      float az = mapz(a.z);
+      float bx = mapx(b.x);
+      float by = mapy(b.y);
+      float bz = mapz(b.z);
+      line(ax,ay,az,bx,by,bz);
+  }
+
+  
+  Vec3 springForce(Vec3 me, Vec3 other) {
+    final float SPRING_NATURAL_LENGTH = EDGE_LENGTH;
+    final float SPRING_CHAR_PERIOD = 0.01; // second
+    final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
+    final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
+                // omega^2 = k/m
+    final float SPRING_CONST = MASS * SPRING_CHAR_OMEGA_SQ;
+    
+
+    float distance = dist(   me.x,    me.y,    me.z,
+                          other.x, other.y, other.z);
+
+    float forceAmp = SPRING_CONST*(distance 
+                                   - SPRING_NATURAL_LENGTH);
+
+// debug
+forceAmp *= 0.01;
+    float unitVectX = ( other.x - me.x ) / distance;                                 
+    float unitVectY = ( other.y - me.y ) / distance;                                 
+    float unitVectZ = ( other.z - me.z ) / distance;
+
+    float fx = forceAmp*unitVectX;
+    float fy = forceAmp*unitVectY;
+    float fz = forceAmp*unitVectZ;
+          
+    Vec3 force = new Vec3(fx,fy,fz);
+
+    return force;                        
+  }
+    
+  void equationOfMotion(float q[], float dq[], float dt) 
+  {
+    for (int n=1; n<N_TRIANGLES-1; n++) { //  skip the ends.   
+      //  u2=2                            
+      //   o            
+      //        .     upper triangle     
+      //     .      .           
+      //               o                
+      //       .     .                         
+      //           .           
+      //         o u1=0          vertex index
+      //                           in a triangle
+      //            o m2=2           o 2         
+      //         .                  . .        
+      //      .      .             .   .     
+      //    o                     .     .   
+      //  me=0  .      .         o . . . o 
+      //            .           0         1
+      //                o m1=1        
+      //  l2=2          
+      //   o          
+      //        .          
+      //     .      .         
+      //               o        
+      //       .     .                  
+      //           .    lower triangle
+      //         o     
+      //        l1=0  
+      
+      for (int me=0; me<3; me++) {
+        //
+        // Connection table
+        //
+        // when n=even
+        //
+        //       same layer    upper     lower triangle
+        //            /  \     /   \     /   \
+        //   me  |  m1   m2   u1   u2   l1   l2
+        //   ----+------------------------------
+        //    0  |   1    2    0    2    0    2
+        //    1  |   2    0    1    0    1    0
+        //    2  |   0    1    2    1    2    1
+        //       +------------------------------
+        //       |  k1   k2   me   k2   me   k2
+        //
+        //
+        // when n=odd
+        //
+        //       same layer    upper     lower triangle
+        //            /  \     /   \     /   \
+        //   me  |  m1   m2   u1   u2   l1   l2
+        //   ----+------------------------------
+        //    0  |   1    2    0    1    0    1
+        //    1  |   2    0    1    2    1    2
+        //    2  |   0    1    2    0    2    0
+        //       +------------------------------
+        //       |  k1   k2   me   k1   me   k1
+            
+        int k1 = (me+1) % 3;
+        int k2 = (me+2) % 3;
+        int myindex = 3*n + me;
+        int[] connectIndex = new int[6];
+        connectIndex[0] = 3*n + k1;  // same layer
+        connectIndex[1] = 3*n + k2;
+        if ( n%2==0 ) {
+          connectIndex[2] = 3*(n+1) + me; // upper layer
+          connectIndex[3] = 3*(n+1) + k2;
+          connectIndex[4] = 3*(n-1) + me; // lower layer
+          connectIndex[5] = 3*(n-1) + k2;
+        }
+        else {
+          connectIndex[2] = 3*(n+1) + me; // upper layer
+          connectIndex[3] = 3*(n+1) + k1;
+          connectIndex[4] = 3*(n-1) + me; // lower layer
+          connectIndex[5] = 3*(n-1) + k1;
+        }
+
+        Vec3 force = new Vec3(0.0, 0.0, 0.0); // spring force 
+        for (int j=0; j<6; j++) {
+          int indexOther = connectIndex[j];
+println(" myindex = ", myindex, " j=", j, " indexOther = ",indexOther);                               
+          Vec3 f = springForce(pos[myindex],
+                               pos[indexOther]);
+          force.add(f);
+        }
+        
+        
+        //float frictionCoeff = 0.0001;
+        //float v_force_x = -frictionCoeff*q[4*i+2];
+        //float v_force_y = -frictionCoeff*q[4*i+3];
+        
+        //float force_x = s_force12x - s_force01x + v_force_x;
+        //float force_y = s_force12y - s_force01y + v_force_y + g_force_y;
+    
+        int i = myindex;
+        dq[6*i+0] = ( q[6*i+3] ) * dt; // dx = vx * dt
+        dq[6*i+1] = ( q[6*i+4] ) * dt; // dy = vy * dt
+        dq[6*i+2] = ( q[6*i+5] ) * dt; // dz = vz * dt
+        dq[6*i+3] = ( force.x ) / MASS * dt; // dvx = (fx/m)*dt 
+        dq[6*i+4] = ( force.y ) / MASS * dt; // dvy = (fy/m)*dt 
+        dq[6*i+5] = ( force.z ) / MASS * dt; // dvz = (fz/m)*dt 
+      }
+    }
+  }
+
+  void drawSticks() {
+    stroke(0, 200, 50);
+
+    for (int n=0; n<N_TRIANGLES; n++) {
+      Vec3 v0 = pos[3*n+0];
+      Vec3 v1 = pos[3*n+1];
+      Vec3 v2 = pos[3*n+2];
+      drawSticksElement(v0,v1);
+      drawSticksElement(v1,v2);
+      drawSticksElement(v2,v0);
+    }
+    
+    for (int n=0; n<N_TRIANGLES-1; n++) {
+      Vec3 v0 = pos[3*n+0];
+      Vec3 v1 = pos[3*n+1];
+      Vec3 v2 = pos[3*n+2];
+      Vec3 v3 = pos[3*n+3]; // upper layer
+      Vec3 v4 = pos[3*n+4];
+      Vec3 v5 = pos[3*n+5];
+      if ( n%2==0 ) {
+        //        
+        //     i=5                      i=4           
+        //       o x x x x x x x x x x x o
+        //         x          i=2      x
+        //           x         o     x
+        //             x     .  .  x
+        //               x .     x
+        //               . x   x  .
+        //             .     o     .
+        //           .      i=3     .
+        //         .                 .
+        //       o . . . . . . . . . .o
+        //      i=0                  i=1
+        drawSticksElement(v3,v0);
+        drawSticksElement(v3,v1);
+        drawSticksElement(v4,v1);
+        drawSticksElement(v4,v2);      
+        drawSticksElement(v5,v0);
+        drawSticksElement(v5,v2);
+      }
+      else {
+        //        
+        //     i=2                      i=1           
+        //       o x x x x x x x x x x x o
+        //         x          i=5      x
+        //           x         o     x
+        //             x     .  .  x
+        //               x .     x
+        //               . x   x  .
+        //             .     o     .
+        //           .      i=0     .
+        //         .                 .
+        //       o . . . . . . . . . .o
+        //      i=3                  i=4
+        //   
+        drawSticksElement(v0,v3);
+        drawSticksElement(v0,v4);
+        drawSticksElement(v1,v4);
+        drawSticksElement(v1,v5);      
+        drawSticksElement(v2,v3);
+        drawSticksElement(v2,v5);
+      }
+    }
+  }
+  
+
+  void rungeKutta()
+  {
+    final float ONE_SIXTH = 1.0/6.0;
+    final float ONE_THIRD = 1.0/3.0;
+    final int NN = 6*N_PARTICLES;  // pos.x,y,z and vel.x,y,z.
+  
+    float[] qprev = new float[NN];
+    float[] qwork = new float[NN];
+    float[] dq1 = new float[NN];
+    float[] dq2 = new float[NN];
+    float[] dq3 = new float[NN];
+    float[] dq4 = new float[NN];
+  
+    for (int n=0; n<N_PARTICLES; n++) {
+      qprev[6*n+0] = pos[n].x;
+      qprev[6*n+1] = pos[n].y;
+      qprev[6*n+2] = pos[n].z;
+      qprev[6*n+3] = vel[n].x;
+      qprev[6*n+4] = vel[n].y;
+      qprev[6*n+5] = vel[n].z;
+    }
+  
+    //step 1
+    equationOfMotion(qprev, dq1, dt);
+    rungeKuttaAdvance(NN, qwork, qprev, dq1, 0.5);
+  
+    //step 2
+    equationOfMotion(qwork, dq2, dt);
+    rungeKuttaAdvance(NN, qwork, qprev, dq2, 0.5);
+  
+    //step 3
+    equationOfMotion(qwork, dq3, dt);
+    rungeKuttaAdvance(NN, qwork, qprev, dq3, 1.0);
+  
+    //step 4
+    equationOfMotion(qwork, dq4, dt);
+  
+    //the result
+    for (int n=1; n<N_PARTICLES-1; n++) { 
+      // See boundaryCondition() for end points.
+      for (int i=0; i<6; i++) {
+        float newval = qprev[6*n+i] + (
+                                  ONE_SIXTH*dq1[6*n+i]
+                                + ONE_THIRD*dq2[6*n+i]
+                                + ONE_THIRD*dq3[6*n+i]
+                                + ONE_SIXTH*dq4[6*n+i]
+                                );
+        if (i==0)
+          pos[n].x = newval;
+        else if (i==1)
+          pos[n].y = newval;
+        else if (i==2)
+          pos[n].z = newval;
+        else if (i==3)
+          vel[n].x = newval;
+        else if (i==4)
+          vel[n].y = newval;
+        else if (i==5)
+          vel[n].z = newval; 
+      }
+    }
+  }
+  
 }
 
 ElasticString elasticString = new ElasticString();
@@ -671,30 +977,47 @@ void reset() {
   
 Poincare poincare = new Poincare();
 
+
+
+
+
+
 void shoot() {
   
-
-    for (int icnt=0; icnt<speed; icnt++) {
-        rungeKutta4(part, part_prev, 2);
-        time += dt;
-        step += 1;
-        
-        poincare.check(part_prev[1].pos.vx,
-                            part[1].pos.vx);
-                            
-        if ( poincare.is_crossed  ) {
-            float wb = poincare.wb;
-            float wa = poincare.wa;
-            
-            float path_x = wa*part_prev[0].pos.x
-                         + wb*     part[0].pos.x;
-            float path_y = wa*part_prev[1].pos.x
-                         + wb*     part[1].pos.x;
-            float path_z = wa*part_prev[0].pos.vx
-                         + wb*     part[0].pos.vx;
-            ds3.save(path_x, path_y, path_z);
-        }
+  
+    for (int n=0; n<10; n++) { // to speed up the display
+      elasticString.rungeKutta();
+      //boundaryCondition();
+      time += dt;
+      step += 1;
+      if ( step%10 == 0 ) {
+//        println("step=", step, " time=", time, " energy=", totalEnergy()," shake=",shakeFlag);
+        println("step=", step, " time=", time);
+      }
     }
+  
+
+//    for (int icnt=0; icnt<speed; icnt++) {
+//        rungeKutta4(part, part_prev, 2);
+//        time += dt;
+//        step += 1;
+        
+//        poincare.check(part_prev[1].pos.vx,
+//                            part[1].pos.vx);
+                            
+//        if ( poincare.is_crossed  ) {
+//            float wb = poincare.wb;
+//            float wa = poincare.wa;
+            
+//            float path_x = wa*part_prev[0].pos.x
+//                         + wb*     part[0].pos.x;
+//            float path_y = wa*part_prev[1].pos.x
+//                         + wb*     part[1].pos.x;
+//            float path_z = wa*part_prev[0].pos.vx
+//                         + wb*     part[0].pos.vx;
+//            ds3.save(path_x, path_y, path_z);
+//        }
+//    }
 
     //rotz += 0.01/60.0*log(speed);
     //rotx += 0.02/60.0*log(speed);
@@ -713,7 +1036,8 @@ void shoot() {
       draw_axes_xyz();
       //place_a_sphere_with_tail();
       place_balls();
-      elasticString.placeBalls();
+      elasticString.drawBalls();
+      elasticString.drawSticks();
     popMatrix();               
     
     //if ( step%1000 == 0 ) {
