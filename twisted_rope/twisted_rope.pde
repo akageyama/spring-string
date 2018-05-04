@@ -128,17 +128,17 @@ void rungeKuttaAdvance(int num, float[] p, float[] p1, float[] dp, float factor)
 
 class Spring 
 {
-  final float SPRING_NATURAL_LENGTH = EDGE_LENGTH;
-  final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
-  final float SPRING_CHAR_OMEGA_SQ = SPRING_CHAR_OMEGA*SPRING_CHAR_OMEGA;
-                // omega^2 = k/m
-  final float SPRING_CONST = MASS * SPRING_CHAR_OMEGA_SQ;
+  float naturalLength;
+  float springConst;
 
   Spring() {
+    naturalLength = EDGE_LENGTH;
+    float omega = PI*2 / SPRING_CHAR_PERIOD;            
+    springConst = MASS * omega * omega;  // omega^2 = k/m
   }
   
   float getConst() {
-    return SPRING_CONST;
+    return springConst;
   }
   
   Vec3 force(float xSelf, float ySelf, float zSelf,
@@ -147,8 +147,8 @@ class Spring
     float distance = dist(xSelf,  ySelf,  zSelf,
                           xOther, yOther, zOther);
 
-    float forceAmp = SPRING_CONST*(distance 
-                                   - SPRING_NATURAL_LENGTH);
+    float forceAmp = springConst*(distance 
+                                  - naturalLength);
 
     float unitVectX = ( xOther - xSelf ) / distance;                                 
     float unitVectY = ( yOther - ySelf ) / distance;                                 
