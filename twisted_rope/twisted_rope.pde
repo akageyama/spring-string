@@ -22,6 +22,8 @@ float time = 0.0;
 int step = 0;
 
 final int N_TRIANGLES = 6;
+final int N_PARTICLES = N_TRIANGLES*3;
+
 final float EDGE_LENGTH = 0.3;
 final float MASS = 0.1;
 final float SPRING_CHAR_PERIOD = 0.1; // second
@@ -118,6 +120,176 @@ class Util
 Util util = new Util();
 
 
+
+class Particles 
+{
+  Vec3[] pos = new Vec3[N_PARTICLES];
+  Vec3[] vel = new Vec3[N_PARTICLES];
+    
+  int[][] sixSpringsList = new int[N_PARTICLES][6];
+            // each particle are connected with 6 springs.
+
+  final int NULL_MARK = -1; // used to count already set elements.
+  
+  void initialConfiguration()
+  {
+    //              (0,a/sqrt(3))
+    //                     .
+    //                     .
+    //                     o 2
+    //                    / \
+    //                   /   \
+    //                  /     \
+    //               0 o - - - o 1
+    //                .         .
+    //               .           .
+    //  (-a/2,-a/(2*sqrt(3))     (a/2,-a/(2*sqrt(3))
+    //        
+    final float C0 = EDGE_LENGTH/2;
+    final float C1 = EDGE_LENGTH/(2*sqrt(3.0));
+    final float C2 = EDGE_LENGTH/sqrt(3);
+    final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
+    
+    final float V0x = -C0;
+    final float V0y = -C1;
+    final float V0z =  0;
+    final float V1x =  C0;
+    final float V1y = -C1;
+    final float V1z =  0;
+    final float V2x =  0;
+    final float V2y =  C2;
+    final float V2z =  0;
+    //
+    //  (-a/2,a/(2*sqrt(3))     (a/2,a/(2*sqrt(3))
+    //               .           .
+    //                .         .
+    //               5 o - - - o 4
+    //                  \     /
+    //                   \   /
+    //                    \ /
+    //                     o 3
+    //                     .
+    //                     .
+    //                (0,-a/sqrt(3))
+    //        
+    final float V3x =   0;
+    final float V3y = -C2;
+    final float V3z =  C3;
+    final float V4x =  C0;
+    final float V4y =  C1;
+    final float V4z =  C3;
+    final float V5x = -C0;
+    final float V5y =  C1;
+    final float V5z =  C3;
+    
+    for (int n=0; n<N_TRIANGLES; n++) {
+      if ( n%2==0 ) {
+        pos[3*n+0] = new Vec3(V0x,V0y,V0z); 
+        pos[3*n+1] = new Vec3(V1x,V1y,V1z); 
+        pos[3*n+2] = new Vec3(V2x,V2y,V2z); 
+      }
+      else {
+        pos[3*n+0] = new Vec3(V3x,V3y,V3z); 
+        pos[3*n+1] = new Vec3(V4x,V4y,V4z); 
+        pos[3*n+2] = new Vec3(V5x,V5y,V5z); 
+      }
+      for (int i=0; i<3; i++) { // shift in z-direction.
+        pos[3*n+i].z += 2*C3*(n/2);
+      }
+    }
+    
+    for (int i=0; i<N_PARTICLES; i++) {
+      vel[i] = new Vec3(0.0, 0.0, 0.0);
+    }
+  }
+  
+  
+  Particles()  
+  {
+    initialConfiguration();
+    
+    for (int p=0; p<N_PARTICLES; p++) {
+      for (int s=0; s<6; s++) {  
+        // each particles is connectd by 6 springs.
+        sixSpringsList[p][s] = NULL_MARK;
+      }
+    }       
+  }
+  
+  
+  Vec3 getPos(int pid) // particle id
+  {
+    return pos[pid];
+  }
+  
+  Vec3 getVel(int pid) // particle id
+  {
+    return vel[pid];
+  }
+  
+  int getId(int layerId, int vertexId)
+  {
+    //  each triangle's                each particle's
+    //    vertex id                        id  
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - 
+    //  
+    //        2                             8   
+    //      .   .       triangle          .   .   
+    //    0 . . . 1      layerId=2      6 . . . 7 
+    //  
+    //  
+    //   2 . . . 1                     5 . . . 4 
+    //    .   .         triangle        .   .   
+    //     0              layerId=1      3   
+    //  
+    //  
+    //        2                             2   
+    //      .   .       triangle          .   .   
+    //    0 . . . 1       layerId=0     0 . . . 1 
+    //    
+    return 3*layerId + vertexId;
+  }
+  
+  
+  void getSixSprings(int particleId, int[] list)
+  {
+    for (int i=0; i<6; i++) {
+      list[i] = sixSpringsList[particleId][i];
+    }
+  }
+  
+  
+  int numberOfRegisteredSpring(int pid)  // particle id
+  {
+    int ans;
+    
+    for (int i=0; i<6; i++) {
+      int val = sixSpringsList[pid][i];
+      if ( val==NULL_MARK ) {
+        ans = i;
+        return ans;
+      }
+    }
+    // alerady set all the six elements.
+    ans = 6;
+    return ans;
+  }
+  
+  
+  void registerOneOfSixSprings(int pid, int springid)
+  {
+    int num = numberOfRegisteredSpring(pid);
+
+    assert num >=0 && num<6;
+
+    sixSpringsList[pid][num] = springid;
+  }
+  
+}
+
+Particles particles = new Particles();
+
+
 void rungeKuttaAdvance(int num, float[] p, float[] p1, float[] dp, float factor)
 {
   for (int j=0; j<num; j++) {
@@ -126,49 +298,226 @@ void rungeKuttaAdvance(int num, float[] p, float[] p1, float[] dp, float factor)
 }
 
 
-class Spring 
+class SpringElement
 {
-  float naturalLength;
+  int endParticleIdAlpha;
+  int endParticleIdBeta;
+  float pullForceAmplitude;
+  Vec3 unitVec3FromAlphaToBeta;
+  
   float springConst;
-
-  Spring() {
-    naturalLength = EDGE_LENGTH;
-    float omega = PI*2 / SPRING_CHAR_PERIOD;            
-    springConst = MASS * omega * omega;  // omega^2 = k/m
+  
+  SpringElement()
+  {
   }
   
+  SpringElement(float springConst, int alpha, int beta)
+  {
+    this.springConst = springConst;
+    endParticleIdAlpha = alpha;
+    endParticleIdBeta  = beta;
+    update(alpha,beta);
+  }
+  
+  void update(int alpha, int beta)
+  {
+    Vec3 alphaPos = particles.getPos(alpha);
+    Vec3 betaPos  = particles.getPos(beta);
+    float ax = alphaPos.x;
+    float ay = alphaPos.y;
+    float az = alphaPos.z;
+    float bx =  betaPos.x;
+    float by =  betaPos.y;
+    float bz =  betaPos.z;
+    float distance = dist(ax, ay, az,
+                          bx, by, bz);
+    unitVec3FromAlphaToBeta.x = (bx-ax)/distance;               
+    unitVec3FromAlphaToBeta.y = (by-ay)/distance;               
+    unitVec3FromAlphaToBeta.z = (bz-az)/distance;
+    
+    pullForceAmplitude = springConst * (distance - EDGE_LENGTH);        
+  }
+  
+  int getAlpha()
+  {
+    return endParticleIdAlpha;
+  }
+  
+  int getBeta()
+  {
+    return endParticleIdBeta;
+  }
+  
+  void setPullForceAmplitude(float pull)
+  {
+    pullForceAmplitude = pull;
+  }
+  
+  float getPullForceAmplitude()
+  {
+    return pullForceAmplitude;
+  }
+  
+}
+
+
+class Springs 
+{  
+  final int N_SPRINGS = 6*(N_TRIANGLES-1);
+
+  float springConst;
+  
+  SpringElement[] element = new SpringElement[N_SPRINGS];
+    //                           
+    //               
+    //                S                           
+    //              x   x  "self triangle layer"
+    //            x       x
+    //          S  x  x  x  S
+    //           \         /
+    //            \       /
+    //          L .\. . ./. L
+    //            . \   / .
+    //              .\ /.   "lower triangle layer"
+    //                L
+
+    //
+    //             U     U     U
+    //        .   / \   / \   /
+    //         \ /   \ /   \ /
+    //        . S x x S x x S .
+    //         / \   / \   / \
+    //        .   \ /   \ /   \
+    //             L     L     L
+    //
+    // each edge in the layer 'S' has two
+    // springs connecting to a vertex
+    // in the lower layer 'L'.
+
+  Springs(float characterPeriod)
+  {
+    float omega = PI*2 / characterPeriod;            
+    springConst = MASS * omega * omega;  // omega^2 = k/m
+
+    
+    int sCtr = 0; // spring counter
+    for (int tl=0; tl<N_TRIANGLES; tl++) { // triangle layer
+      int pId0 = particles.id(tl,0);
+      int pId1 = particles.id(tl,1);
+      int pId2 = particles.id(tl,2);
+      register(sCtr, pId0, pId1);       
+      register(sCtr, pId1, pId2);       
+      register(sCtr, pId2, pId0);             
+    }
+    for (int tl=1; tl<N_TRIANGLES; tl++) {
+      for (int me=0; me<3; me++) {
+        //
+        // when tl=even
+        //
+        // each vertex in the layer 'S' has two
+        // springs connecting to two vertices
+        // in the upper and lower layers 'U' and 'L'.
+        //
+        //             U     U     U    
+        //        .   / \   / \   /
+        //         \ /   \ /   \ /
+        //        . S x x S x x S .    tl (even layer)
+        //         / \   / \   / \
+        //        .   \ /   \ /   \
+        //             L     L     L
+        //
+        //    vertexId (0, 1, 2) in each triangle.
+        //
+        //             0     1     2   upper layer
+        //        .   / \   / \   /
+        //         \ /   \ /   \ /
+        //        . 0 x x 1 x x 2 .    tl (even layer)
+        //         / \   / \   / \
+        //        .   \ /   \ /   \
+        //             0     1     2   lower layer
+        //
+        // Connection table. me's counterpart of each spring.
+        //
+        //       same layer    upper     lower layer
+        //            /  \     /   \     /   \
+        //   me  |  m1   m2   u1   u2   l1   l2
+        //   ----+------------------------------
+        //    0  |   1    2    0    2    0    2
+        //    1  |   2    0    1    0    1    0
+        //    2  |   0    1    2    1    2    1
+        //       +------------------------------
+        //       |  k1   k2   me   k2   me   k2
+        //
+        //
+        // when tl=odd
+        //
+        //       same layer    upper     lower layer
+        //            /  \     /   \     /   \
+        //   me  |  m1   m2   u1   u2   l1   l2
+        //   ----+------------------------------
+        //    0  |   1    2    0    1    0    1
+        //    1  |   2    0    1    2    1    2
+        //    2  |   0    1    2    0    2    0
+        //       +------------------------------
+        //       |  k1   k2   me   k1   me   k1
+            
+        int k1 = (me+1) % 3;
+        int k2 = (me+2) % 3;
+
+        int myPid = particles.id(tl,me);
+
+        if ( tl%2==0 ) {
+          register(sCtr, myPid, particles.id(tl-1,me)); // lower layer
+          register(sCtr, myPid, particles.id(tl-1,k2)); // lower layer
+        }
+        else {
+          register(sCtr, myPid, particles.id(tl-1,me)); // lower layer
+          register(sCtr, myPid, particles.id(tl-1,k1)); // lower layer
+        }
+      }
+    }
+  }
+
+    
   float getConst() {
     return springConst;
   }
   
-  Vec3 force(float xSelf, float ySelf, float zSelf,
-             float xOther, float yOther, float zOther) {
+  
+  void register(int springId, int alpha, int beta)
+  {
+    //
+    // ids of particles on the both ends
+    //           alpha         beta
+    //             \           /
+    //              O=========O 
+    //
+
+    element[springId] = new SpringElement(springConst,alpha,beta);
+
+    particles.registerOneOfSixSprings(alpha, springId);
+    particles.registerOneOfSixSprings(beta,  springId);
     
-    float distance = dist(xSelf,  ySelf,  zSelf,
-                          xOther, yOther, zOther);
-
-    float forceAmp = springConst*(distance 
-                                  - naturalLength);
-
-    float unitVectX = ( xOther - xSelf ) / distance;                                 
-    float unitVectY = ( yOther - ySelf ) / distance;                                 
-    float unitVectZ = ( zOther - zSelf ) / distance;
-
-    float fx = forceAmp*unitVectX;
-    float fy = forceAmp*unitVectY;
-    float fz = forceAmp*unitVectZ;
-          
-    Vec3 force = new Vec3(fx,fy,fz);
-
-    return force;                        
+    springId++;
   }
+
+
+  void update()
+  {
+    for (int s=0; s<N_SPRINGS; s++) {
+      SpringElement spring = element[s];
+      int pidAlpha = spring.getAlpha();
+      int pidBeta  = spring.getBeta();
+      spring.update(pidAlpha, pidBeta);
+    }
+  }
+
 }
 
-Spring spring = new Spring();
+Springs springs = new Springs(SPRING_CHAR_PERIOD);
 
 
 class ElasticString {
-  final int N_PARTICLES = N_TRIANGLES*3;
   Vec3[] pos = new Vec3[N_PARTICLES];
   Vec3[] vel = new Vec3[N_PARTICLES];
 
