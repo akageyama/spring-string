@@ -5,13 +5,8 @@
  
  Developed 
  - by Akira Kageyama (kage@port.kobe-u.ac.jp)
- - on 2018.05.02 
+ - on 2018.05.05
  
- 
- Usage:
- - Type u/d to speed up/down.
- - Type s to toggle start/stop.
- - Or mouse click to toggle start/stop. 
  
  */
 
@@ -23,12 +18,10 @@ int step = 0;
 
 final int N_TRIANGLES = 6;
 final int N_PARTICLES = N_TRIANGLES*3;
-
 final float EDGE_LENGTH = 0.3;
-final float MASS = 0.1;
+final float PARTICLE_MASS = 0.1;
 final float SPRING_CHAR_PERIOD = 0.1; // second
 
-// float dt = 0.0001;
 float dt = SPRING_CHAR_PERIOD*0.1;
 
 float x_coord_min = -3.0;
@@ -40,47 +33,47 @@ float z_coord_max = x_coord_max;
 
 
 class Rotor {
-    float rotx = 0;
-    float roty = 0;
-    float rotz = 0;
-    float delta = PI/100;
-    boolean toggle_keep_rotate_x = false;
-    boolean toggle_keep_rotate_y = false;
-    boolean toggle_keep_rotate_z = false;
+  float rotx = 0;
+  float roty = 0;
+  float rotz = 0;
+  float delta = PI/100;
+  boolean toggle_keep_rotate_x = false;
+  boolean toggle_keep_rotate_y = false;
+  boolean toggle_keep_rotate_z = false;
 
-    Rotor(float rotx, float roty, float rotz) {
-        this.rotx = rotx;
-        this.roty = roty;
-        this.rotz = rotz;
-    }
-    
-    
-    float fit(float angle) {
-        float ans = angle;
-        if ( ans > 2*PI ) ans -= 2*PI;
-        if ( ans < 0    ) ans += 2*PI;
-        return ans;
-    }
-    
-    void update() {
-        if ( toggle_keep_rotate_x ) rotx = fit(rotx + delta);
-        if ( toggle_keep_rotate_y ) roty = fit(roty + delta);
-        if ( toggle_keep_rotate_z ) rotz = fit(rotz + delta);
-    }
-    
-    void toggle(char key) {
-        switch (key) {
-          case 'x':
-            toggle_keep_rotate_x = !toggle_keep_rotate_x;
-            break;
-          case 'y':
-            toggle_keep_rotate_y = !toggle_keep_rotate_y;
-            break;
-          case 'z':
-            toggle_keep_rotate_z = !toggle_keep_rotate_z;
-            break;
-        }           
-    }
+  Rotor(float rotx, float roty, float rotz) {
+    this.rotx = rotx;
+    this.roty = roty;
+    this.rotz = rotz;
+  }
+  
+  
+  float fit(float angle) {
+    float ans = angle;
+    if ( ans > 2*PI ) ans -= 2*PI;
+    if ( ans < 0    ) ans += 2*PI;
+    return ans;
+  }
+  
+  void update() {
+    if ( toggle_keep_rotate_x ) rotx = fit(rotx + delta);
+    if ( toggle_keep_rotate_y ) roty = fit(roty + delta);
+    if ( toggle_keep_rotate_z ) rotz = fit(rotz + delta);
+  }
+  
+  void toggle(char key) {
+    switch (key) {
+      case 'x':
+        toggle_keep_rotate_x = !toggle_keep_rotate_x;
+        break;
+      case 'y':
+        toggle_keep_rotate_y = !toggle_keep_rotate_y;
+        break;
+      case 'z':
+        toggle_keep_rotate_z = !toggle_keep_rotate_z;
+        break;
+    }           
+  }
 }
 
 Rotor rotor = new Rotor(0,0,0); 
@@ -96,10 +89,22 @@ class Vec3 {
     this.z = z;
   }
   
+  Vec3(Vec3 rhs) {
+    this.x = rhs.x;
+    this.y = rhs.y;
+    this.z = rhs.z;
+  }
+  
   void add(Vec3 v) {
     this.x += v.x;
     this.y += v.y;
     this.z += v.z;
+  }
+  
+  void multiply(float a) {
+    this.x *= a;
+    this.y *= a;
+    this.z *= a;
   }
 }
 
@@ -123,15 +128,51 @@ Util util = new Util();
 
 class Particles 
 {
-  Vec3[] pos = new Vec3[N_PARTICLES];
-  Vec3[] vel = new Vec3[N_PARTICLES];
+  private Vec3[] pos = new Vec3[N_PARTICLES];
+  private Vec3[] vel = new Vec3[N_PARTICLES];
     
-  int[][] sixSpringsList = new int[N_PARTICLES][6];
+  private int[][] sixSpringList = new int[N_PARTICLES][6];
             // each particle are connected with 6 springs.
+            //
+            //    upper layer
+            //  (3) (2)
+            //   |  /    (1)        
+            //   | /   o    same
+            //   |/ o          layer
+            //  (X) o  o  o  (0)
+            //    \ \  
+            //     \  \   
+            //      \   \
+            //     (4)   (5)
+            //       lower layer
 
-  final int NULL_MARK = -1; // used to count already set elements.
+
+  private final int NULL_MARK = -1; // used to count already set elements.
   
-  void initialConfiguration()
+        //
+        //                     o  p=8
+        //                  .    .
+        //               .         .
+        //            .              .
+        //         o .   .  .  .  .  . o
+        //      p=6                     p=7
+        //        
+        //     p=5                      p=4                             
+        //        o x x x x x x x x x o 
+        //          x              x  
+        //            x         x  
+        //              x    x   
+        //                 o  
+        //              p=3
+        //                     o  p=2
+        //                  .    .
+        //               .         .
+        //            .              .
+        //         o .   .  .  .  .  . o
+        //      p=0                     p=1
+        //
+
+  private void initialConfiguration()
   {
     //              (0,a/sqrt(3))
     //                     .
@@ -183,18 +224,18 @@ class Particles
     final float V5z =  C3;
     
     for (int n=0; n<N_TRIANGLES; n++) {
-      if ( n%2==0 ) {
-        pos[3*n+0] = new Vec3(V0x,V0y,V0z); 
-        pos[3*n+1] = new Vec3(V1x,V1y,V1z); 
-        pos[3*n+2] = new Vec3(V2x,V2y,V2z); 
+      if ( n%2==0 ) {        
+        pos[id(n,0)] = new Vec3(V0x,V0y,V0z); 
+        pos[id(n,1)] = new Vec3(V1x,V1y,V1z); 
+        pos[id(n,2)] = new Vec3(V2x,V2y,V2z); 
       }
       else {
-        pos[3*n+0] = new Vec3(V3x,V3y,V3z); 
-        pos[3*n+1] = new Vec3(V4x,V4y,V4z); 
-        pos[3*n+2] = new Vec3(V5x,V5y,V5z); 
+        pos[id(n,0)] = new Vec3(V3x,V3y,V3z); 
+        pos[id(n,1)] = new Vec3(V4x,V4y,V4z); 
+        pos[id(n,2)] = new Vec3(V5x,V5y,V5z); 
       }
       for (int i=0; i<3; i++) { // shift in z-direction.
-        pos[3*n+i].z += 2*C3*(n/2);
+        pos[id(n,i)].z += 2*C3*(n/2);
       }
     }
     
@@ -208,28 +249,61 @@ class Particles
   {
     initialConfiguration();
     
-    for (int p=0; p<N_PARTICLES; p++) {
-      for (int s=0; s<6; s++) {  
-        // each particles is connectd by 6 springs.
-        sixSpringsList[p][s] = NULL_MARK;
+    for (int nt=1; nt<N_TRIANGLES-1; nt++) { // skip both ends.
+      for (int j=0; j<3; j++) {
+        int pid = id(nt,j); // particle id num.
+        for (int s=0; s<6; s++) {  // six springs.
+          // each particles is connectd by 6 springs.
+          sixSpringList[pid][s] = NULL_MARK;
+        }
       }
     }       
   }
   
   
-  Vec3 getPos(int pid) // particle id
+  Vec3 getPos(int particleId)
   {
-    return pos[pid];
+    return pos[particleId];
   }
   
-  Vec3 getVel(int pid) // particle id
+  void setPosX(int particleId, float x)
   {
-    return vel[pid];
+    pos[particleId].x = x;
+  }  
+  
+  void setPosY(int particleId, float y)
+  {
+    pos[particleId].y = y;
   }
   
-  int getId(int layerId, int vertexId)
+  void setPosZ(int particleId, float z)
   {
-    //  each triangle's                each particle's
+    pos[particleId].z = z;
+  }
+  
+  Vec3 getVel(int particleId)
+  {
+    return vel[particleId];
+  }
+  
+  void setVelX(int particleId, float vx)
+  {
+    vel[particleId].x = vx;
+  }
+  
+  void setVelY(int particleId, float vy)
+  {
+    vel[particleId].y = vy;
+  }
+  
+  void setVelZ(int particleId, float vz)
+  {
+    vel[particleId].z = vz;
+  }
+  
+  int id(int layerId, int vertexId)
+  {
+    //  each triangle's              each particle's
     //    vertex id                        id  
     // - - - - - - - - - - - - - - - - - - - - - - - - - - 
     //  
@@ -251,20 +325,24 @@ class Particles
   }
   
   
-  void getSixSprings(int particleId, int[] list)
+  int[] getSixSpringListForThisParticle(int particleId)
   {
+    int[] list = new int[6];
+    
     for (int i=0; i<6; i++) {
-      list[i] = sixSpringsList[particleId][i];
+      list[i] = sixSpringList[particleId][i];
     }
+    
+    return list;
   }
   
   
-  int numberOfRegisteredSpring(int pid)  // particle id
+  private int numberOfAlreadyRegisteredSpring(int particleId)
   {
     int ans;
     
     for (int i=0; i<6; i++) {
-      int val = sixSpringsList[pid][i];
+      int val = sixSpringList[particleId][i];
       if ( val==NULL_MARK ) {
         ans = i;
         return ans;
@@ -276,36 +354,48 @@ class Particles
   }
   
   
-  void registerOneOfSixSprings(int pid, int springid)
+  void registerOneOfSixSprings(int particleId, int springid)
   {
-    int num = numberOfRegisteredSpring(pid);
+    int num = numberOfAlreadyRegisteredSpring(particleId);
 
     assert num >=0 && num<6;
 
-    sixSpringsList[pid][num] = springid;
+    sixSpringList[particleId][num] = springid;
   }
   
+  
+  void draw() {
+    noStroke();
+    fill(100,0,130);
+    for (int i=0; i<N_PARTICLES; i++) {
+      pushMatrix();
+        float x = pos[i].x;
+        float y = pos[i].y;
+        float z = pos[i].z;
+        translate(mapx(x), mapy(y), mapz(z));      
+        sphere(3);
+      popMatrix();
+    }
+  }
+
 }
 
 Particles particles = new Particles();
 
 
-void rungeKuttaAdvance(int num, float[] p, float[] p1, float[] dp, float factor)
-{
-  for (int j=0; j<num; j++) {
-    p[j] = p1[j] + factor*dp[j];
-  }  
-}
-
 
 class SpringElement
 {
-  int endParticleIdAlpha;
-  int endParticleIdBeta;
-  float pullForceAmplitude;
-  Vec3 unitVec3FromAlphaToBeta;
+  //  A spring, with two ends called alpha and beta.
+  //           alpha         beta
+  //              O=========O 
   
-  float springConst;
+  private int endParticleIdAlpha;
+  private int endParticleIdBeta;
+  private float pullForceAmplitude;
+  private Vec3 unitVec3FromAlphaToBeta;
+  private Vec3 unitVec3FromBetaToAlpha;
+  private float springConst;
   
   SpringElement()
   {
@@ -316,46 +406,73 @@ class SpringElement
     this.springConst = springConst;
     endParticleIdAlpha = alpha;
     endParticleIdBeta  = beta;
-    update(alpha,beta);
+    update();
   }
   
-  void update(int alpha, int beta)
+  void update()
   {
-    Vec3 alphaPos = particles.getPos(alpha);
-    Vec3 betaPos  = particles.getPos(beta);
-    float ax = alphaPos.x;
-    float ay = alphaPos.y;
-    float az = alphaPos.z;
-    float bx =  betaPos.x;
-    float by =  betaPos.y;
-    float bz =  betaPos.z;
+    Vec3 alpha = particles.getPos(endParticleIdAlpha);
+    Vec3  beta = particles.getPos(endParticleIdBeta);
+    float ax = alpha.x;
+    float ay = alpha.y;
+    float az = alpha.z;
+    float bx =  beta.x;
+    float by =  beta.y;
+    float bz =  beta.z;
     float distance = dist(ax, ay, az,
                           bx, by, bz);
+    
+    pullForceAmplitude = springConst * (distance - EDGE_LENGTH);        
+
     unitVec3FromAlphaToBeta.x = (bx-ax)/distance;               
     unitVec3FromAlphaToBeta.y = (by-ay)/distance;               
     unitVec3FromAlphaToBeta.z = (bz-az)/distance;
+    unitVec3FromBetaToAlpha.x = -unitVec3FromAlphaToBeta.x;               
+    unitVec3FromBetaToAlpha.y = -unitVec3FromAlphaToBeta.y;               
+    unitVec3FromBetaToAlpha.z = -unitVec3FromAlphaToBeta.z;
+  }
+  
+  //int getAlpha()
+  //{
+  //  return endParticleIdAlpha;
+  //}
+  
+  //int getBeta()
+  //{
+  //  return endParticleIdBeta;
+  //}
+  
+  Vec3 getForce(int particleId) 
+  {
+    Vec3 force = new Vec3(0.0, 0.0, 0.0);
     
-    pullForceAmplitude = springConst * (distance - EDGE_LENGTH);        
+    if (particleId==endParticleIdAlpha) {
+      force = new Vec3(unitVec3FromAlphaToBeta);
+      force.multiply(pullForceAmplitude);
+    }
+    else if (particleId==endParticleIdBeta) {
+      force = new Vec3(unitVec3FromBetaToAlpha);
+      force.multiply(pullForceAmplitude);
+    }
+    else {
+      println("??? SpringElement/getForce");
+      exit();
+    }
+    return force;
   }
   
-  int getAlpha()
-  {
-    return endParticleIdAlpha;
-  }
-  
-  int getBeta()
-  {
-    return endParticleIdBeta;
-  }
-  
-  void setPullForceAmplitude(float pull)
-  {
-    pullForceAmplitude = pull;
-  }
-  
-  float getPullForceAmplitude()
-  {
-    return pullForceAmplitude;
+  void draw() {
+    Vec3 alpha = particles.pos[endParticleIdAlpha];
+    Vec3 beta  = particles.pos[endParticleIdBeta];
+    
+    float ax = mapx(alpha.x);
+    float ay = mapy(alpha.y);
+    float az = mapz(alpha.z);
+    float bx = mapx( beta.x);
+    float by = mapy( beta.y);
+    float bz = mapz( beta.z);
+    
+    line(ax,ay,az,bx,by,bz);
   }
   
 }
@@ -363,11 +480,9 @@ class SpringElement
 
 class Springs 
 {  
-  final int N_SPRINGS = 6*(N_TRIANGLES-1);
-
-  float springConst;
+  private final int N_SPRINGS = 3*N_TRIANGLES + 6*(N_TRIANGLES-1);
   
-  SpringElement[] element = new SpringElement[N_SPRINGS];
+  private SpringElement[] element = new SpringElement[N_SPRINGS];
     //                           
     //               
     //                S                           
@@ -397,19 +512,19 @@ class Springs
   Springs(float characterPeriod)
   {
     float omega = PI*2 / characterPeriod;            
-    springConst = MASS * omega * omega;  // omega^2 = k/m
-
+    float spc = PARTICLE_MASS * omega * omega;
+              // spc = spring constant:  omega^2 = spc / mass
     
     int sCtr = 0; // spring counter
-    for (int tl=0; tl<N_TRIANGLES; tl++) { // triangle layer
-      int pId0 = particles.id(tl,0);
-      int pId1 = particles.id(tl,1);
-      int pId2 = particles.id(tl,2);
-      register(sCtr, pId0, pId1);       
-      register(sCtr, pId1, pId2);       
-      register(sCtr, pId2, pId0);             
+    for (int tl=0; tl<N_TRIANGLES; tl++) { // for "hirizontal" triangle edges.
+      int pId0 = particles.id(tl,0); // 1st vertex in the triangle
+      int pId1 = particles.id(tl,1); // 2nd  here here
+      int pId2 = particles.id(tl,2); // 3rd
+      register(spc, sCtr++, pId0, pId1);       
+      register(spc, sCtr++, pId1, pId2);       
+      register(spc, sCtr++, pId2, pId0);             
     }
-    for (int tl=1; tl<N_TRIANGLES; tl++) {
+    for (int tl=1; tl<N_TRIANGLES; tl++) { // skip the lowest layer.
       for (int me=0; me<3; me++) {
         //
         // when tl=even
@@ -418,48 +533,48 @@ class Springs
         // springs connecting to two vertices
         // in the upper and lower layers 'U' and 'L'.
         //
-        //             U     U     U    
+        //             U     U     U    upper layer
         //        .   / \   / \   /
         //         \ /   \ /   \ /
         //        . S x x S x x S .    tl (even layer)
         //         / \   / \   / \
         //        .   \ /   \ /   \
-        //             L     L     L
+        //             L     L     L    lower layer
         //
         //    vertexId (0, 1, 2) in each triangle.
         //
-        //             0     1     2   upper layer
+        //             0     1     2    upper layer
         //        .   / \   / \   /
         //         \ /   \ /   \ /
         //        . 0 x x 1 x x 2 .    tl (even layer)
         //         / \   / \   / \
         //        .   \ /   \ /   \
-        //             0     1     2   lower layer
+        //             0     1     2    lower layer
         //
         // Connection table. me's counterpart of each spring.
         //
-        //       same layer    upper     lower layer
-        //            /  \     /   \     /   \
-        //   me  |  m1   m2   u1   u2   l1   l2
-        //   ----+------------------------------
-        //    0  |   1    2    0    2    0    2
-        //    1  |   2    0    1    0    1    0
-        //    2  |   0    1    2    1    2    1
-        //       +------------------------------
-        //       |  k1   k2   me   k2   me   k2
+        //       same layer    lower layer
+        //            /  \     /   \
+        //   me  |  m1   m2   l1   l2
+        //   ----+--------------------
+        //    0  |   1    2    0    2
+        //    1  |   2    0    1    0
+        //    2  |   0    1    2    1
+        //       +---------------------
+        //       |  k1   k2   me   k2
         //
         //
         // when tl=odd
         //
-        //       same layer    upper     lower layer
-        //            /  \     /   \     /   \
-        //   me  |  m1   m2   u1   u2   l1   l2
-        //   ----+------------------------------
-        //    0  |   1    2    0    1    0    1
-        //    1  |   2    0    1    2    1    2
-        //    2  |   0    1    2    0    2    0
-        //       +------------------------------
-        //       |  k1   k2   me   k1   me   k1
+        //       same layer    lower layer
+        //            /  \     /   \
+        //   me  |  m1   m2   l1   l2
+        //   ----+--------------------
+        //    0  |   1    2    0    1
+        //    1  |   2    0    1    2
+        //    2  |   0    1    2    0
+        //       +--------------------
+        //       |  k1   k2   me   k1
             
         int k1 = (me+1) % 3;
         int k2 = (me+2) % 3;
@@ -467,24 +582,20 @@ class Springs
         int myPid = particles.id(tl,me);
 
         if ( tl%2==0 ) {
-          register(sCtr, myPid, particles.id(tl-1,me)); // lower layer
-          register(sCtr, myPid, particles.id(tl-1,k2)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(tl-1,me)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(tl-1,k2)); // lower layer
         }
         else {
-          register(sCtr, myPid, particles.id(tl-1,me)); // lower layer
-          register(sCtr, myPid, particles.id(tl-1,k1)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(tl-1,me)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(tl-1,k1)); // lower layer
         }
       }
     }
   }
 
-    
-  float getConst() {
-    return springConst;
-  }
   
-  
-  void register(int springId, int alpha, int beta)
+  private void register(float springConst, int springId, 
+                        int alpha, int beta)
   {
     //
     // ids of particles on the both ends
@@ -497,18 +608,20 @@ class Springs
 
     particles.registerOneOfSixSprings(alpha, springId);
     particles.registerOneOfSixSprings(beta,  springId);
-    
-    springId++;
   }
 
 
   void update()
   {
     for (int s=0; s<N_SPRINGS; s++) {
-      SpringElement spring = element[s];
-      int pidAlpha = spring.getAlpha();
-      int pidBeta  = spring.getBeta();
-      spring.update(pidAlpha, pidBeta);
+      element[s].update();
+    }
+  }
+  
+  void draw()
+  {
+    for (int s=0; s<N_SPRINGS; s++) {
+      element[s].draw();
     }
   }
 
@@ -517,125 +630,31 @@ class Springs
 Springs springs = new Springs(SPRING_CHAR_PERIOD);
 
 
-class ElasticString {
-  Vec3[] pos = new Vec3[N_PARTICLES];
-  Vec3[] vel = new Vec3[N_PARTICLES];
 
-  //        
-  //     i=5                       i=4         
-  //       o x x x x x x x x x x x o
-  //         x          i=2      x
-  //           x         o     x
-  //             x     .  .  x
-  //               x .     x
-  //               . x   x  .
-  //             .     o     .
-  //           .      i=3     .
-  //         .                 .
-  //       o . . . . . . . . . .o
-  //      i=0                  i=1
-  //
-  
-  ElasticString() {
-    //              (0,a/sqrt(3))
-    //                     .
-    //                     .
-    //                     o 2
-    //                    / \
-    //                   /   \
-    //                  /     \
-    //               0 o - - - o 1
-    //                .         .
-    //               .           .
-    //  (-a/2,-a/(2*sqrt(3))     (a/2,-a/(2*sqrt(3))
-    //        
-    final float C0 = EDGE_LENGTH/2;
-    final float C1 = EDGE_LENGTH/(2*sqrt(3.0));
-    final float C2 = EDGE_LENGTH/sqrt(3);
-    final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
-    
-    final float V0x = -C0;
-    final float V0y = -C1;
-    final float V0z =  0;
-    final float V1x =  C0;
-    final float V1y = -C1;
-    final float V1z =  0;
-    final float V2x =  0;
-    final float V2y =  C2;
-    final float V2z =  0;
-    //
-    //  (-a/2,a/(2*sqrt(3))     (a/2,a/(2*sqrt(3))
-    //               .           .
-    //                .         .
-    //               5 o - - - o 4
-    //                  \     /
-    //                   \   /
-    //                    \ /
-    //                     o 3
-    //                     .
-    //                     .
-    //                (0,-a/sqrt(3))
-    //        
-    final float V3x =   0;
-    final float V3y = -C2;
-    final float V3z =  C3;
-    final float V4x =  C0;
-    final float V4y =  C1;
-    final float V4z =  C3;
-    final float V5x = -C0;
-    final float V5y =  C1;
-    final float V5z =  C3;
-    
-    for (int n=0; n<N_TRIANGLES; n++) {
-      if ( n%2==0 ) {
-        pos[3*n+0] = new Vec3(V0x,V0y,V0z); 
-        pos[3*n+1] = new Vec3(V1x,V1y,V1z); 
-        pos[3*n+2] = new Vec3(V2x,V2y,V2z); 
-      }
-      else {
-        pos[3*n+0] = new Vec3(V3x,V3y,V3z); 
-        pos[3*n+1] = new Vec3(V4x,V4y,V4z); 
-        pos[3*n+2] = new Vec3(V5x,V5y,V5z); 
-      }
-      for (int i=0; i<3; i++) { // shift in z-direction.
-        pos[3*n+i].z += 2*C3*(n/2);
-      }
-    }
-    
-    for (int i=0; i<N_PARTICLES; i++) {
-      vel[i] = new Vec3(0.0, 0.0, 0.0);
-    }
-  }
-  
-  void drawBalls() {
-    noStroke();
-    fill(100,0,130);
-    for (int i=0; i<N_PARTICLES; i++) {
-      pushMatrix();
-        float x = pos[i].x;
-        float y = pos[i].y;
-        float z = pos[i].z;
-        translate(mapx(x), mapy(y), mapz(z));      
-        sphere(3);
-      popMatrix();
-    }
+class ElasticString
+{
 
-}
-  
-  void drawSticksElement(Vec3 a, Vec3 b) {
-      float ax = mapx(a.x);
-      float ay = mapy(a.y);
-      float az = mapz(a.z);
-      float bx = mapx(b.x);
-      float by = mapy(b.y);
-      float bz = mapz(b.z);
-      line(ax,ay,az,bx,by,bz);
-  }
-
-
-  void equationOfMotion(float q[], float dq[], float dt) 
+  ElasticString()
   {
-    for (int n=1; n<N_TRIANGLES-1; n++) { //  skip the ends.   
+  }
+  
+  private void rungeKuttaIncrement(int num, 
+                                   float[] p, 
+                                   float[] p1, 
+                                   float[] dp, 
+                                   float factor)
+  {
+    for (int j=0; j<num; j++) {
+      p[j] = p1[j] + factor*dp[j];
+    }  
+  }
+
+  
+  private void equationOfMotion(float q[], float dq[], float dt) 
+  {
+    float dtm = dt / PARTICLE_MASS;
+    
+    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip the ends.   
       //  u2=2                            
       //   o            
       //        .     upper triangle     
@@ -663,153 +682,27 @@ class ElasticString {
       //        l1=0  
       
       for (int me=0; me<3; me++) {
-        //
-        // Connection table
-        //
-        // when n=even
-        //
-        //       same layer    upper     lower triangle
-        //            /  \     /   \     /   \
-        //   me  |  m1   m2   u1   u2   l1   l2
-        //   ----+------------------------------
-        //    0  |   1    2    0    2    0    2
-        //    1  |   2    0    1    0    1    0
-        //    2  |   0    1    2    1    2    1
-        //       +------------------------------
-        //       |  k1   k2   me   k2   me   k2
-        //
-        //
-        // when n=odd
-        //
-        //       same layer    upper     lower triangle
-        //            /  \     /   \     /   \
-        //   me  |  m1   m2   u1   u2   l1   l2
-        //   ----+------------------------------
-        //    0  |   1    2    0    1    0    1
-        //    1  |   2    0    1    2    1    2
-        //    2  |   0    1    2    0    2    0
-        //       +------------------------------
-        //       |  k1   k2   me   k1   me   k1
-            
-        int k1 = (me+1) % 3;
-        int k2 = (me+2) % 3;
-        int myindex = 3*n + me;
-        int[] connectIndex = new int[6];
-        connectIndex[0] = 3*n + k1;  // same layer
-        connectIndex[1] = 3*n + k2;
-        if ( n%2==0 ) {
-          connectIndex[2] = 3*(n+1) + me; // upper layer
-          connectIndex[3] = 3*(n+1) + k2;
-          connectIndex[4] = 3*(n-1) + me; // lower layer
-          connectIndex[5] = 3*(n-1) + k2;
-        }
-        else {
-          connectIndex[2] = 3*(n+1) + me; // upper layer
-          connectIndex[3] = 3*(n+1) + k1;
-          connectIndex[4] = 3*(n-1) + me; // lower layer
-          connectIndex[5] = 3*(n-1) + k1;
-        }
+        int pid = particles.id(tl,me); // particle id
+        int[] splist = new int[6];
+        splist = particles.getSixSpringListForThisParticle(pid);
 
-        Vec3 force = new Vec3(0.0, 0.0, 0.0); // spring force
-        float xSelf = q[6*myindex+0];
-        float ySelf = q[6*myindex+1];
-        float zSelf = q[6*myindex+2];
-        for (int j=0; j<6; j++) {
-          int indexOther = connectIndex[j];
-          float xOther = q[6*indexOther+0];
-          float yOther = q[6*indexOther+1];
-          float zOther = q[6*indexOther+2];
-          Vec3 f = spring.force(xSelf,  ySelf,  zSelf,
-                                xOther, yOther, zOther);
-          force.add(f);
+        Vec3 force = new Vec3(0.0, 0.0, 0.0);
+        for (int s=0; s<6; s++) {
+          SpringElement aSpring = springs.element[splist[s]];
+          Vec3 pullForceFromTheSpring = aSpring.getForce(pid);
+          force.add(pullForceFromTheSpring);          
         }
-        
-        //float frictionCoeff = 0.0001;
-        //float v_force_x = -frictionCoeff*q[4*i+2];
-        //float v_force_y = -frictionCoeff*q[4*i+3];
-        
-        //float force_x = s_force12x - s_force01x + v_force_x;
-        //float force_y = s_force12y - s_force01y + v_force_y + g_force_y;
-    
-        int i = myindex;
-        dq[6*i+0] = ( q[6*i+3] ) * dt; // dx = vx * dt
-        dq[6*i+1] = ( q[6*i+4] ) * dt; // dy = vy * dt
-        dq[6*i+2] = ( q[6*i+5] ) * dt; // dz = vz * dt
-        dq[6*i+3] = ( force.x ) / MASS * dt; // dvx = (fx/m)*dt 
-        dq[6*i+4] = ( force.y ) / MASS * dt; // dvy = (fy/m)*dt 
-        dq[6*i+5] = ( force.z ) / MASS * dt; // dvz = (fz/m)*dt 
+        dq[6*pid+0] = ( q[6*pid+3] ) * dt; // dx = vx * dt
+        dq[6*pid+1] = ( q[6*pid+4] ) * dt; // dy = vy * dt
+        dq[6*pid+2] = ( q[6*pid+5] ) * dt; // dz = vz * dt
+        dq[6*pid+3] = ( force.x ) * dtm; // dvx = (fx/m)*dt 
+        dq[6*pid+4] = ( force.y ) * dtm; // dvy = (fy/m)*dt 
+        dq[6*pid+5] = ( force.z ) * dtm; // dvz = (fz/m)*dt 
       }
     }
   }
   
-
-  void drawSticks() {
-    stroke(0, 200, 50);
-
-    for (int n=0; n<N_TRIANGLES; n++) {
-      Vec3 v0 = pos[3*n+0];
-      Vec3 v1 = pos[3*n+1];
-      Vec3 v2 = pos[3*n+2];
-      drawSticksElement(v0,v1);
-      drawSticksElement(v1,v2);
-      drawSticksElement(v2,v0);
-    }
-    
-    for (int n=0; n<N_TRIANGLES-1; n++) {
-      Vec3 v0 = pos[3*n+0];
-      Vec3 v1 = pos[3*n+1];
-      Vec3 v2 = pos[3*n+2];
-      Vec3 v3 = pos[3*n+3]; // upper layer
-      Vec3 v4 = pos[3*n+4];
-      Vec3 v5 = pos[3*n+5];
-      if ( n%2==0 ) {
-        //        
-        //     i=5                      i=4           
-        //       o x x x x x x x x x x x o
-        //         x          i=2      x
-        //           x         o     x
-        //             x     .  .  x
-        //               x .     x
-        //               . x   x  .
-        //             .     o     .
-        //           .      i=3     .
-        //         .                 .
-        //       o . . . . . . . . . .o
-        //      i=0                  i=1
-        drawSticksElement(v3,v0);
-        drawSticksElement(v3,v1);
-        drawSticksElement(v4,v1);
-        drawSticksElement(v4,v2);      
-        drawSticksElement(v5,v0);
-        drawSticksElement(v5,v2);
-      }
-      else {
-        //        
-        //     i=2                      i=1           
-        //       o x x x x x x x x x x x o
-        //         x          i=5      x
-        //           x         o     x
-        //             x     .  .  x
-        //               x .     x
-        //               . x   x  .
-        //             .     o     .
-        //           .      i=0     .
-        //         .                 .
-        //       o . . . . . . . . . .o
-        //      i=3                  i=4
-        //   
-        drawSticksElement(v0,v3);
-        drawSticksElement(v0,v4);
-        drawSticksElement(v1,v4);
-        drawSticksElement(v1,v5);      
-        drawSticksElement(v2,v3);
-        drawSticksElement(v2,v5);
-      }
-    }
-  }
-  
-
-  void rungeKutta()
+  private void rungeKutta()
   {
     final float ONE_SIXTH = 1.0/6.0;
     final float ONE_THIRD = 1.0/3.0;
@@ -823,25 +716,27 @@ class ElasticString {
     float[] dq4 = new float[NN];
       
     for (int n=0; n<N_PARTICLES; n++) {
-      qprev[6*n+0] = pos[n].x;
-      qprev[6*n+1] = pos[n].y;
-      qprev[6*n+2] = pos[n].z;
-      qprev[6*n+3] = vel[n].x;
-      qprev[6*n+4] = vel[n].y;
-      qprev[6*n+5] = vel[n].z;
+      Vec3 pos = particles.getPos(n);
+      Vec3 vel = particles.getVel(n);
+      qprev[6*n+0] = pos.x;
+      qprev[6*n+1] = pos.y;
+      qprev[6*n+2] = pos.z;
+      qprev[6*n+3] = vel.x;
+      qprev[6*n+4] = vel.y;
+      qprev[6*n+5] = vel.z;
     }
   
     //step 1
     equationOfMotion(qprev, dq1, dt);
-    rungeKuttaAdvance(NN, qwork, qprev, dq1, 0.5);
+    rungeKuttaIncrement(NN, qwork, qprev, dq1, 0.5);
   
     //step 2
     equationOfMotion(qwork, dq2, dt);
-    rungeKuttaAdvance(NN, qwork, qprev, dq2, 0.5);
+    rungeKuttaIncrement(NN, qwork, qprev, dq2, 0.5);
   
     //step 3
     equationOfMotion(qwork, dq3, dt);
-    rungeKuttaAdvance(NN, qwork, qprev, dq3, 1.0);
+    rungeKuttaIncrement(NN, qwork, qprev, dq3, 1.0);
   
     //step 4
     equationOfMotion(qwork, dq4, dt);
@@ -858,19 +753,32 @@ class ElasticString {
                                 + ONE_SIXTH*dq4[6*n+i]
                                 );
         if (i==0)
-          pos[n].x = newval;
+          particles.setPosX(n,newval);
         else if (i==1)
-          pos[n].y = newval;
+          particles.setPosY(n,newval);
         else if (i==2)
-          pos[n].z = newval;
+          particles.setPosZ(n,newval);
         else if (i==3)
-          vel[n].x = newval;
+          particles.setVelX(n,newval);
         else if (i==4)
-          vel[n].y = newval;
+          particles.setVelY(n,newval);
         else if (i==5)
-          vel[n].z = newval; 
+          particles.setVelZ(n,newval);
       } 
     }
+  }
+  
+      
+  void update()
+  {
+    rungeKutta();
+    springs.update();
+  }
+
+  void draw()
+  {
+    particles.draw();
+    springs.draw();
   }
   
   //float totalEnergy() 
@@ -886,16 +794,15 @@ class ElasticString {
   //    float vely = vel[i].y;
   //    float velz = vel[i].z;
   //    sum_potential += 0.5*springc*util.squaredSum(
-  //    sum_kinetic += 0.5*MASS*(velx*velx
+  //    sum_kinetic += 0.5*PARTICLE_MASS*(velx*velx
   //                            +vely*vely
   //                            +velz*velz);
   //  }
-  //  float kinetic = 0.5*MASS*(
+  //  float kinetic = 0.5*PARTICLE_MASS*(
   //}
 }
 
 ElasticString elasticString = new ElasticString();
-
 
 
 
@@ -932,16 +839,6 @@ void draw_axes_xyz() {
         line(0, 0, mapz(z_coord_min), 0, 0, mapz(z_coord_max));
 }
 
-
-
-void place_a_sphere(float x, float y, float z) {
-    stroke(150, 100, 255);
-    fill(0, 200,200);
-    pushMatrix();
-        translate(mapx(x), mapy(y), mapz(z));      
-        sphere(2);
-    popMatrix();
-}
 
 
 
@@ -997,8 +894,8 @@ void setup() {
     
 //    float s = sqrt((x1-x2)*(x1-x2)+(y1-y2)*(y1-y2));
 
-//    float m1 = part[0].mass;
-//    float m2 = part[1].mass;
+//    float m1 = part[0].PARTICLE_MASS;
+//    float m2 = part[1].PARTICLE_MASS;
 //    float kinetic_e = 0.5*(m1*(v1sq+y1dotsq)
 //                          +m2*(v2sq+y2dotsq));
 //    float potential = 0.5*SPRING_K*(s-SPRING_L0)*(s-SPRING_L0);
