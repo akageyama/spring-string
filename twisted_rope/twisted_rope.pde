@@ -323,6 +323,11 @@ class Particles
     return pos[particleId];
   }
   
+  Vec3[] getPos()
+  {
+    return pos;
+  }
+  
   void setPosX(int particleId, float x)
   {
     pos[particleId].x = x;
@@ -508,9 +513,10 @@ class SpringElement
   }
   
   
-  void draw() {
-    Vec3 alpha = particles.pos[endParticleIdAlpha];
-    Vec3 beta  = particles.pos[endParticleIdBeta];
+  void draw(Vec3[] pos) {
+    
+    Vec3 alpha = pos[endParticleIdAlpha];
+    Vec3 beta  = pos[endParticleIdBeta];
     
     float ax = mapx(alpha.x);
     float ay = mapy(alpha.y);
@@ -661,12 +667,12 @@ println(" springId = ", springId);
 
 
   
-  void draw()
+  void draw(Vec3[] pos)
   {
     stroke(150, 100, 70);
 
     for (int s=0; s<N_SPRINGS; s++) {
-      element[s].draw();
+      element[s].draw(pos);
     }
   }
   
@@ -876,7 +882,7 @@ class ElasticString
   void draw()
   {
     particles.draw();
-    springs.draw();
+    springs.draw(particles.getPos());
   }
   
   //float totalEnergy() 
