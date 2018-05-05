@@ -2,8 +2,12 @@
 
 class Particles 
 {
-  private Vec3[] pos = new Vec3[N_PARTICLES];
-  private Vec3[] vel = new Vec3[N_PARTICLES];
+  private float[] posx = new float[N_PARTICLES];
+  private float[] posy = new float[N_PARTICLES];
+  private float[] posz = new float[N_PARTICLES];
+  private float[] velx = new float[N_PARTICLES];
+  private float[] vely = new float[N_PARTICLES];
+  private float[] velz = new float[N_PARTICLES];
 
   //              (0,a/sqrt(3))
   //                     .
@@ -179,50 +183,108 @@ class Particles
   }
   
   
-  Vec3 getPos(int particleId)
+  float getPosX(int p)
   {
-    return pos[particleId];
+    return posx[p];
   }
   
-  Vec3[] getPos()
+  float getPosY(int p)
   {
-    return pos;
+    return posy[p];
   }
   
-  void setPosX(int particleId, float x)
+  float getPosZ(int p)
   {
-    pos[particleId].x = x;
+    return posz[p];
+  }
+  
+  void setPosX(int p, float x)
+  {
+    posx[p] = x;
   }  
   
-  void setPosY(int particleId, float y)
+  void setPosX(float[] x)
   {
-    pos[particleId].y = y;
+    for (int i=0; i<N_PARTICLES; i++) {
+      posx[i] = x[i];
+    }
   }
   
-  void setPosZ(int particleId, float z)
+  void setPosY(int p, float y)
   {
-    pos[particleId].z = z;
+    posy[p] = y;
   }
   
-  Vec3 getVel(int particleId)
+  void setPosY(float[] y)
   {
-    return vel[particleId];
+    for (int i=0; i<N_PARTICLES; i++) {
+      posy[i] = y[i];
+    }
   }
   
-  void setVelX(int particleId, float vx)
+  void setPosZ(int p, float z)
   {
-    vel[particleId].x = vx;
+    posz[p] = z;
+  }
+
+  void setPosZ(float[] z)
+  {
+    for (int i=0; i<N_PARTICLES; i++) {
+      posz[i] = z[i];
+    }
+  }
+    
+  float getVelX(int p)
+  {
+    return velx[p];
   }
   
-  void setVelY(int particleId, float vy)
+  float getVelY(int p)
   {
-    vel[particleId].y = vy;
+    return vely[p];
   }
   
-  void setVelZ(int particleId, float vz)
+  float getVelZ(int p)
   {
-    vel[particleId].z = vz;
+    return velz[p];
   }
+  
+  void setVelX(int p, float vx)
+  {
+    velx[p] = vx;
+  }
+  
+  void setVelX(float[] vx)
+  {
+    for (int i=0; i<N_PARTICLES; i++) {
+      velx[i] = vx[i];
+    }      
+  }
+  
+  void setVelY(int p, float vy)
+  {
+    vely[p] = vy;
+  }
+  
+  void setVelY(float[] vy)
+  {
+    for (int i=0; i<N_PARTICLES; i++) {
+      vely[i] = vy[i];
+    }      
+  }
+  
+  void setVelZ(int p, float vz)
+  {
+    velz[p] = vz;
+  }
+  
+  void setVelZ(float[] vz)
+  {
+    for (int i=0; i<N_PARTICLES; i++) {
+      velz[i] = vz[i];
+    }      
+  }
+  
   
   int id(int layerId, int vertexId)
   {
@@ -292,9 +354,9 @@ class Particles
     fill(100,0,130);
     for (int i=0; i<N_PARTICLES; i++) {
       pushMatrix();
-        float x = pos[i].x;
-        float y = pos[i].y;
-        float z = pos[i].z;
+        float x = posx[i];
+        float y = posy[i];
+        float z = posz[i];
         translate(mapx(x), mapy(y), mapz(z));      
         sphere(3);
       popMatrix();

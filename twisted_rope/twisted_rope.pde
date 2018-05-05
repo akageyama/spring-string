@@ -69,7 +69,7 @@ float mapz(float z) {
 
 
 
-void draw_axes_xyz() { //<>//
+void draw_axes_xyz() { //<>// //<>//
         stroke(100, 100, 100);
         line(mapx(x_coord_min), 0, 0, mapx(x_coord_max), 0, 0);
         line(0, mapy(y_coord_min), 0, 0, mapy(y_coord_max), 0);
