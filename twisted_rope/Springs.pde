@@ -135,12 +135,14 @@ println(" springId = ", springId);
 
 
   
-  void draw(Vec3[] pos)
+  void draw(float[] posx,
+            float[] posy,
+            float[] posz)
   {
     stroke(150, 100, 70);
 
     for (int s=0; s<N_SPRINGS; s++) {
-      element[s].draw(pos);
+      element[s].draw(posx, posy, posz);
     }
   }
   

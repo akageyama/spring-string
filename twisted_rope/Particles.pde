@@ -105,37 +105,59 @@ class Particles
     
     for (int n=0; n<N_TRIANGLES; n++) {
       if ( n%2==0 ) {        
-        pos[id(n,0)] = new Vec3(V0x,V0y,V0z); 
-        pos[id(n,1)] = new Vec3(V1x,V1y,V1z); 
-        pos[id(n,2)] = new Vec3(V2x,V2y,V2z); 
+        posx[id(n,0)] = V0x;
+        posy[id(n,0)] = V0y;
+        posz[id(n,0)] = V0z; 
+        posx[id(n,1)] = V1x;
+        posy[id(n,1)] = V1y;
+        posz[id(n,1)] = V1z; 
+        posx[id(n,2)] = V2x;
+        posy[id(n,2)] = V2y;
+        posz[id(n,2)] = V2z; 
       }
       else {
-        pos[id(n,0)] = new Vec3(V3x,V3y,V3z); 
-        pos[id(n,1)] = new Vec3(V4x,V4y,V4z); 
-        pos[id(n,2)] = new Vec3(V5x,V5y,V5z); 
+        posx[id(n,0)] = V3x;
+        posy[id(n,0)] = V3y;
+        posz[id(n,0)] = V3z; 
+        posx[id(n,1)] = V4x;
+        posy[id(n,1)] = V4y;
+        posz[id(n,1)] = V4z; 
+        posx[id(n,2)] = V5x;
+        posy[id(n,2)] = V5y;
+        posz[id(n,2)] = V5z; 
       }
       for (int i=0; i<3; i++) { // shift in z-direction.
-        pos[id(n,i)].z += 2*C3*(n/2);
+        posz[id(n,i)] += 2*C3*(n/2);
       }
     }
     
     for (int i=0; i<N_PARTICLES; i++) {
-      vel[i] = new Vec3(0.0, 0.0, 0.0);
+      velx[i] = 0.0;
+      vely[i] = 0.0;
+      velz[i] = 0.0;
     }
   }
   
   
   void shiftCenterOfGravityToOrigin()
   {
-    Vec3 cog = new Vec3(0.0, 0.0, 0.0); // center of gravity
+    float cogx = 0.0;  // center of gravity
+    float cogy = 0.0;
+    float cogz = 0.0;  
     
     for (int p=0; p<N_PARTICLES; p++) {
-      cog.add(pos[p]);
+      cogx += posx[p];
+      cogy += posy[p];
+      cogz += posz[p];
     }
-    cog.divide(float(N_PARTICLES));
+    cogx /= float(N_PARTICLES);
+    cogy /= float(N_PARTICLES);
+    cogz /= float(N_PARTICLES);
     
     for (int p=0; p<N_PARTICLES; p++) {
-      pos[p].subtract(cog);
+      posx[p] -= cogx;
+      posy[p] -= cogy;
+      posz[p] -= cogz;
     }
   }
   
@@ -182,17 +204,32 @@ class Particles
     }       
   }
   
+  float[] getPosX()
+  {
+    return posx;
+  }
   
   float getPosX(int p)
   {
     return posx[p];
   }
   
+  
+  float[] getPosY()
+  {
+    return posy;
+  }
+
   float getPosY(int p)
   {
     return posy[p];
   }
-  
+
+  float[] getPosZ()
+  {
+    return posz;
+  }
+
   float getPosZ(int p)
   {
     return posz[p];

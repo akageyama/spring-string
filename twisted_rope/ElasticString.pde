@@ -243,6 +243,12 @@ class ElasticString
                         velxwork,
                         velywork,
                         velzwork,
+                        posxprev,
+                        posyprev,
+                        poszprev,
+                        velxprev,
+                        velyprev,
+                        velzprev,
                         dposx2,
                         dposy2,
                         dposz2,
@@ -278,6 +284,9 @@ class ElasticString
                         velxwork,
                         velywork,
                         velzwork,
+                        posxprev,
+                        posyprev,
+                        poszprev,
                         velxprev,
                         velyprev,
                         velzprev,
@@ -376,7 +385,9 @@ class ElasticString
   void draw()
   {
     particles.draw();
-    springs.draw(particles.getPos());
+    springs.draw(particles.getPosX(),
+                 particles.getPosY(),
+                 particles.getPosZ());
   }
   
   //float totalEnergy() 

@@ -66,17 +66,17 @@ class SpringElement
   }
   
   
-  void draw(Vec3[] pos) {
+  void draw(float[] posx,
+            float[] posy,
+            float[] posz) 
+  {
     
-    Vec3 alpha = pos[endParticleIdAlpha];
-    Vec3 beta  = pos[endParticleIdBeta];
-    
-    float ax = mapx(alpha.x);
-    float ay = mapy(alpha.y);
-    float az = mapz(alpha.z);
-    float bx = mapx( beta.x);
-    float by = mapy( beta.y);
-    float bz = mapz( beta.z);
+    float ax = mapx(posx[endParticleIdAlpha]);
+    float ay = mapx(posy[endParticleIdAlpha]);
+    float az = mapx(posz[endParticleIdAlpha]);
+    float bx = mapx(posx[endParticleIdBeta]);
+    float by = mapx(posy[endParticleIdBeta]);
+    float bz = mapx(posz[endParticleIdBeta]);
 
     line(ax,ay,az,bx,by,bz);
   }
