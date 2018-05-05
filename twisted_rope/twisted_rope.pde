@@ -16,13 +16,13 @@
 float time = 0.0;
 int step = 0;
 
-final int N_TRIANGLES = 6;
+final int N_TRIANGLES = 20;
 final int N_PARTICLES = N_TRIANGLES*3;
 final float EDGE_LENGTH = 0.3;
 final float PARTICLE_MASS = 0.1;
 final float SPRING_CHAR_PERIOD = 0.1; // second
 
-float dt = SPRING_CHAR_PERIOD*0.01;
+float dt = SPRING_CHAR_PERIOD*0.001;
 
 float x_coord_min = -3.0;
 float x_coord_max =  3.0;
@@ -101,10 +101,23 @@ class Vec3 {
     this.z += v.z;
   }
   
+    
+  void subtract(Vec3 v) {
+    this.x -= v.x;
+    this.y -= v.y;
+    this.z -= v.z;
+  }
+  
   void multiply(float a) {
     this.x *= a;
     this.y *= a;
     this.z *= a;
+  }
+  
+  void divide(float a) {
+    this.x /= a;
+    this.y /= a;
+    this.z /= a;
   }
 }
 
@@ -130,6 +143,55 @@ class Particles
 {
   private Vec3[] pos = new Vec3[N_PARTICLES];
   private Vec3[] vel = new Vec3[N_PARTICLES];
+
+  //              (0,a/sqrt(3))
+  //                     .
+  //                     .
+  //                     o 2
+  //                    / \
+  //                   /   \
+  //                  /     \
+  //               0 o - - - o 1
+  //                .         .
+  //               .           .
+  //  (-a/2,-a/(2*sqrt(3))     (a/2,-a/(2*sqrt(3))
+  //        
+  final float C0 = EDGE_LENGTH/2;
+  final float C1 = EDGE_LENGTH/(2*sqrt(3.0));
+  final float C2 = EDGE_LENGTH/sqrt(3);
+  final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
+  
+  final float V0x = -C0;
+  final float V0y = -C1;
+  final float V0z =  0;
+  final float V1x =  C0;
+  final float V1y = -C1;
+  final float V1z =  0;
+  final float V2x =  0;
+  final float V2y =  C2;
+  final float V2z =  0;
+  //
+  //  (-a/2,a/(2*sqrt(3))     (a/2,a/(2*sqrt(3))
+  //               .           .
+  //                .         .
+  //               5 o - - - o 4
+  //                  \     /
+  //                   \   /
+  //                    \ /
+  //                     o 3
+  //                     .
+  //                     .
+  //                (0,-a/sqrt(3))
+  //        
+  final float V3x =   0;
+  final float V3y = -C2;
+  final float V3z =  C3;
+  final float V4x =  C0;
+  final float V4y =  C1;
+  final float V4z =  C3;
+  final float V5x = -C0;
+  final float V5y =  C1;
+  final float V5z =  C3;  
     
   private int[][] sixSpringList = new int[N_PARTICLES][6];
             // each particle are connected with 6 springs.
@@ -174,54 +236,7 @@ class Particles
 
   private void initialConfiguration()
   {
-    //              (0,a/sqrt(3))
-    //                     .
-    //                     .
-    //                     o 2
-    //                    / \
-    //                   /   \
-    //                  /     \
-    //               0 o - - - o 1
-    //                .         .
-    //               .           .
-    //  (-a/2,-a/(2*sqrt(3))     (a/2,-a/(2*sqrt(3))
-    //        
-    final float C0 = EDGE_LENGTH/2;
-    final float C1 = EDGE_LENGTH/(2*sqrt(3.0));
-    final float C2 = EDGE_LENGTH/sqrt(3);
-    final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
-    
-    final float V0x = -C0;
-    final float V0y = -C1;
-    final float V0z =  0;
-    final float V1x =  C0;
-    final float V1y = -C1;
-    final float V1z =  0;
-    final float V2x =  0;
-    final float V2y =  C2;
-    final float V2z =  0;
-    //
-    //  (-a/2,a/(2*sqrt(3))     (a/2,a/(2*sqrt(3))
-    //               .           .
-    //                .         .
-    //               5 o - - - o 4
-    //                  \     /
-    //                   \   /
-    //                    \ /
-    //                     o 3
-    //                     .
-    //                     .
-    //                (0,-a/sqrt(3))
-    //        
-    final float V3x =   0;
-    final float V3y = -C2;
-    final float V3z =  C3;
-    final float V4x =  C0;
-    final float V4y =  C1;
-    final float V4z =  C3;
-    final float V5x = -C0;
-    final float V5y =  C1;
-    final float V5z =  C3;
+
     
     for (int n=0; n<N_TRIANGLES; n++) {
       if ( n%2==0 ) {        
@@ -245,9 +260,51 @@ class Particles
   }
   
   
+  void shiftCenterOfGravityToOrigin()
+  {
+    Vec3 cog = new Vec3(0.0, 0.0, 0.0); // center of gravity
+    
+    for (int p=0; p<N_PARTICLES; p++) {
+      cog.add(pos[p]);
+    }
+    cog.divide(float(N_PARTICLES));
+    
+    for (int p=0; p<N_PARTICLES; p++) {
+      pos[p].subtract(cog);
+    }
+  }
+  
+  Vec3[] lowerBoundaryConfiguration(float t, float z)
+  {
+    float factor = 0.1;
+    float angle = (PI*2 / SPRING_CHAR_PERIOD) * factor * t;
+    
+    Vec3[] verts = new Vec3[3];
+    
+    float x, y;
+    
+    x = cos(angle)*V0x - sin(angle)*V0y;
+    y = sin(angle)*V0x + cos(angle)*V0y;
+    verts[0] = new Vec3(x,y,z);
+    
+    x = cos(angle)*V1x - sin(angle)*V1y;
+    y = sin(angle)*V1x + cos(angle)*V1y;
+    verts[1] = new Vec3(x,y,z);
+    
+    x = cos(angle)*V2x - sin(angle)*V2y;
+    y = sin(angle)*V2x + cos(angle)*V2y;
+    verts[2] = new Vec3(x,y,z);
+
+    return verts;
+  }
+  
+  
+  
   Particles()  
   {
     initialConfiguration();
+    
+    shiftCenterOfGravityToOrigin();
     
     for (int nt=0; nt<N_TRIANGLES; nt++) {
       for (int j=0; j<3; j++) {
@@ -663,6 +720,7 @@ class ElasticString
       //           .           
       //         o u1=0          vertex index
       //                           in a triangle
+
       //            o m2=2           o 2         
       //         .                  . .        
       //      .      .             .   .     
@@ -705,6 +763,28 @@ class ElasticString
   }
 
 
+  void boundaryCondition(float t, float[] generalCoord)
+  {
+    Vec3[] verts = new Vec3[3];
+    
+    //for (int j=0; j<3; j++) { // three vertices at the bottom.
+    //  verts[j].x = generalCoord[6*j+0];
+    //  verts[j].y = generalCoord[6*j+1];
+    //  verts[j].z = generalCoord[6*j+2];
+    //}
+    
+    float z0 = generalCoord[0*6+2];
+    
+    verts = particles.lowerBoundaryConfiguration(t,z0);
+    
+    for (int j=0; j<3; j++) { // three vertices at the bottom.
+      generalCoord[6*j+0] = verts[j].x;
+      generalCoord[6*j+1] = verts[j].y;
+      generalCoord[6*j+2] = verts[j].z;
+    }
+    
+  }
+
   
   
   void rungeKutta()
@@ -734,46 +814,61 @@ class ElasticString
     //step 1
     equationOfMotion(qprev, dq1, dt);
     rungeKuttaIncrement(NN, qwork, qprev, dq1, 0.5);
+
+    time += 0.5*dt;
+    boundaryCondition(time, qwork);
   
     //step 2
     equationOfMotion(qwork, dq2, dt);
     rungeKuttaIncrement(NN, qwork, qprev, dq2, 0.5);
+
+    boundaryCondition(time, qwork);
   
     //step 3
     equationOfMotion(qwork, dq3, dt);
     rungeKuttaIncrement(NN, qwork, qprev, dq3, 1.0);
+
+    time += 0.5*dt;
+    boundaryCondition(time, qwork);
   
     //step 4
     equationOfMotion(qwork, dq4, dt);
 
-  
     //the result
     for (int tl=1; tl<N_TRIANGLES-1; tl++) { 
       // See boundaryCondition() for end points.
       for (int j=0; j<3; j++) { // three verteces in a triangle.
         int pid = particles.id(tl,j);        
         for (int i=0; i<6; i++) { // x,y,z,vx,vy,vz
-          float newval = qprev[6*pid+i] + (
-                                    ONE_SIXTH*dq1[6*pid+i]
-                                  + ONE_THIRD*dq2[6*pid+i]
-                                  + ONE_THIRD*dq3[6*pid+i]
-                                  + ONE_SIXTH*dq4[6*pid+i]
-                                  );
-          if (i==0)
-            particles.setPosX(pid,newval);
-          else if (i==1)
-            particles.setPosY(pid,newval);
-          else if (i==2)
-            particles.setPosZ(pid,newval);
-          else if (i==3)
-            particles.setVelX(pid,newval);
-          else if (i==4)
-            particles.setVelY(pid,newval);
-          else if (i==5)
-            particles.setVelZ(pid,newval);
+          qwork[6*pid+i] =         qprev[6*pid+i] + (
+                           ONE_SIXTH*dq1[6*pid+i]
+                         + ONE_THIRD*dq2[6*pid+i]
+                         + ONE_THIRD*dq3[6*pid+i]
+                         + ONE_SIXTH*dq4[6*pid+i]
+                         );
         } 
       }
     }
+    boundaryCondition(time, qwork);
+  
+    for (int p=0; p<N_PARTICLES; p++) { 
+      for (int i=0; i<6; i++) { // x,y,z,vx,vy,vz
+        float work = qwork[6*p+i];
+        if (i==0)
+          particles.setPosX(p,work);
+        else if (i==1)
+          particles.setPosY(p,work);
+        else if (i==2)
+          particles.setPosZ(p,work);
+        else if (i==3)
+          particles.setVelX(p,work);
+        else if (i==4)
+          particles.setVelY(p,work);
+        else if (i==5)
+          particles.setVelZ(p,work);
+      } 
+    }
+    
   }
   
 
@@ -911,10 +1006,9 @@ void setup() {
 
 void shoot() {
   
-    for (int n=0; n<1; n++) { // to speed up the display
+    for (int n=0; n<20; n++) { // to speed up the display
       elasticString.rungeKutta();
       //boundaryCondition();
-      time += dt;
       step += 1;
       if ( step%10 == 0 ) {
         println("step=", step, " time=", time);
