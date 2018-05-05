@@ -22,7 +22,7 @@ final float EDGE_LENGTH = 0.3;
 final float PARTICLE_MASS = 0.1;
 final float SPRING_CHAR_PERIOD = 0.1; // second
 
-float dt = SPRING_CHAR_PERIOD*0.1;
+float dt = SPRING_CHAR_PERIOD*0.01;
 
 float x_coord_min = -3.0;
 float x_coord_max =  3.0;
@@ -354,7 +354,7 @@ class Particles
   }
   
   
-  void registerOneOfSixSprings(int particleId, int springid)
+  void sixSpringsAppend(int particleId, int springid)
   {
     int num = numberOfAlreadyRegisteredSpring(particleId);
 
@@ -392,9 +392,6 @@ class SpringElement
   
   private int endParticleIdAlpha;
   private int endParticleIdBeta;
-  private float pullForceAmplitude;
-  private Vec3 unitVec3FromAlphaToBeta;
-  private Vec3 unitVec3FromBetaToAlpha;
   private float springConst;
   
   SpringElement()
@@ -406,52 +403,44 @@ class SpringElement
     this.springConst = springConst;
     endParticleIdAlpha = alpha;
     endParticleIdBeta  = beta;
-    update();
   }
   
-  void update()
-  {
-    Vec3 alpha = particles.getPos(endParticleIdAlpha);
-    Vec3  beta = particles.getPos(endParticleIdBeta);
-    float ax = alpha.x;
-    float ay = alpha.y;
-    float az = alpha.z;
-    float bx =  beta.x;
-    float by =  beta.y;
-    float bz =  beta.z;
-    float distance = dist(ax, ay, az,
-                          bx, by, bz);
-    
-    pullForceAmplitude = springConst * (distance - EDGE_LENGTH);        
 
-    unitVec3FromAlphaToBeta.x = (bx-ax)/distance;               
-    unitVec3FromAlphaToBeta.y = (by-ay)/distance;               
-    unitVec3FromAlphaToBeta.z = (bz-az)/distance;
-    unitVec3FromBetaToAlpha.x = -unitVec3FromAlphaToBeta.x;               
-    unitVec3FromBetaToAlpha.y = -unitVec3FromAlphaToBeta.y;               
-    unitVec3FromBetaToAlpha.z = -unitVec3FromAlphaToBeta.z;
+  int getAlpha()
+  {
+    return endParticleIdAlpha;
   }
   
-  //int getAlpha()
-  //{
-  //  return endParticleIdAlpha;
-  //}
+  int getBeta()
+  {
+    return endParticleIdBeta;
+  }
   
-  //int getBeta()
-  //{
-  //  return endParticleIdBeta;
-  //}
-  
-  Vec3 getPullForce(int particleId) 
+  Vec3 getPullForce(int particleId, float[] generalCoord) 
   {
     Vec3 force = new Vec3(0.0, 0.0, 0.0);
     
+    float ax = generalCoord[6*endParticleIdAlpha+0];
+    float ay = generalCoord[6*endParticleIdAlpha+1];
+    float az = generalCoord[6*endParticleIdAlpha+2];
+    float bx = generalCoord[6*endParticleIdBeta +0];
+    float by = generalCoord[6*endParticleIdBeta +1];
+    float bz = generalCoord[6*endParticleIdBeta +2];
+    
+    float distance = dist(ax, ay, az, bx, by, bz);
+    
+    float pullForceAmplitude = springConst * (distance - EDGE_LENGTH);
+    
     if (particleId==endParticleIdAlpha) {
-      force = new Vec3(unitVec3FromAlphaToBeta);
+      force = new Vec3((bx-ax)/distance,
+                       (by-ay)/distance,
+                       (bz-az)/distance);  // unit vector from alpha to beta.
       force.multiply(pullForceAmplitude);
     }
     else if (particleId==endParticleIdBeta) {
-      force = new Vec3(unitVec3FromBetaToAlpha);
+      force = new Vec3((ax-bx)/distance,
+                       (ay-by)/distance,
+                       (az-bz)/distance);  // unit vector from beta to alpha.
       force.multiply(pullForceAmplitude);
     }
     else {
@@ -460,6 +449,7 @@ class SpringElement
     }
     return force;
   }
+  
   
   void draw() {
     Vec3 alpha = particles.pos[endParticleIdAlpha];
@@ -471,7 +461,7 @@ class SpringElement
     float bx = mapx( beta.x);
     float by = mapy( beta.y);
     float bz = mapz( beta.z);
-    
+
     line(ax,ay,az,bx,by,bz);
   }
   
@@ -481,14 +471,17 @@ class SpringElement
 class Springs 
 {  
   private final int N_SPRINGS = 3*N_TRIANGLES + 6*(N_TRIANGLES-1);
+    // 3*N_TRIANGLES: In each "hirozntal" layer, a triangle has three edges.
+    // 6*(N_TRIANGLES-1): Each vertex in the triangle has two springs 
+    //                    connected to two vertices in the lower layer.
   
   private SpringElement[] element = new SpringElement[N_SPRINGS];
     //                           
     //               
-    //                S                           
+    //                H                           
     //              x   x  "self triangle layer"
     //            x       x
-    //          S  x  x  x  S
+    //          H  x  x  x  H
     //           \         /
     //            \       /
     //          L .\. . ./. L
@@ -500,12 +493,12 @@ class Springs
     //             U     U     U
     //        .   / \   / \   /
     //         \ /   \ /   \ /
-    //        . S x x S x x S .
+    //        . H x x H x x H .
     //         / \   / \   / \
     //        .   \ /   \ /   \
     //             L     L     L
     //
-    // each edge in the layer 'S' has two
+    // each edge in the layer 'H' has two
     // springs connecting to a vertex
     // in the lower layer 'L'.
 
@@ -514,12 +507,13 @@ class Springs
     float omega = PI*2 / characteristicPeriod;            
     float spc = PARTICLE_MASS * omega * omega;
               // spc = spring constant:  omega^2 = spc / mass
-    
+
     int sCtr = 0; // spring counter
-    for (int tl=0; tl<N_TRIANGLES; tl++) { // for "hirizontal" triangle edges.
+    for (int tl=0; tl<N_TRIANGLES; tl++) { // for "hirizontal" triangles.
       int pId0 = particles.id(tl,0); // 1st vertex in the triangle
-      int pId1 = particles.id(tl,1); // 2nd  here here
+      int pId1 = particles.id(tl,1); // 2nd 
       int pId2 = particles.id(tl,2); // 3rd
+
       register(spc, sCtr++, pId0, pId1);       
       register(spc, sCtr++, pId1, pId2);       
       register(spc, sCtr++, pId2, pId0);             
@@ -533,15 +527,7 @@ class Springs
         // springs connecting to two vertices
         // in the upper and lower layers 'U' and 'L'.
         //
-        //             U     U     U    upper layer
-        //        .   / \   / \   /
-        //         \ /   \ /   \ /
-        //        . S x x S x x S .    tl (even layer)
-        //         / \   / \   / \
-        //        .   \ /   \ /   \
-        //             L     L     L    lower layer
-        //
-        //    vertexId (0, 1, 2) in each triangle.
+        //    vertexId (0, 1, 2) in each layer.
         //
         //             0     1     2    upper layer
         //        .   / \   / \   /
@@ -551,7 +537,7 @@ class Springs
         //        .   \ /   \ /   \
         //             0     1     2    lower layer
         //
-        // Connection table. me's counterpart of each spring.
+        // Connection table. me and its counterparts.
         //
         //       same layer    lower layer
         //            /  \     /   \
@@ -591,7 +577,11 @@ class Springs
         }
       }
     }
+    println("debug: sCtr = ", sCtr);
+    
   }
+  
+  
 
   
   private void register(float springConst, int springId, 
@@ -604,26 +594,30 @@ class Springs
     //              O=========O 
     //
 
+println(" springId = ", springId);
     element[springId] = new SpringElement(springConst,alpha,beta);
 
-    particles.registerOneOfSixSprings(alpha, springId);
-    particles.registerOneOfSixSprings(beta,  springId);
+    particles.sixSpringsAppend(alpha, springId);
+    particles.sixSpringsAppend(beta,  springId);
   }
 
 
-  void update()
-  {
-    for (int s=0; s<N_SPRINGS; s++) {
-      element[s].update();
-    }
-  }
+
   
   void draw()
   {
+    stroke(150, 100, 70);
+
     for (int s=0; s<N_SPRINGS; s++) {
       element[s].draw();
     }
   }
+  
+  SpringElement getElement(int n)
+  {
+    return element[n];
+  }
+  
 
 }
 
@@ -649,12 +643,17 @@ class ElasticString
     }  
   }
 
+
+  
+  //private void equationOfMotion(float q[], float dq[], float dt)
+  //{
+     
+  //}
   
   private void equationOfMotion(float q[], float dq[], float dt) 
   {
     float dtm = dt / PARTICLE_MASS;
     
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip the ends.   
       //  u2=2                            
       //   o            
       //        .     upper triangle     
@@ -680,33 +679,39 @@ class ElasticString
       //           .    lower triangle
       //         o     
       //        l1=0  
-      
+
+
+    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip the ends.   
       for (int me=0; me<3; me++) {
         int pid = particles.id(tl,me); // particle id
         int[] splist = new int[6];
         splist = particles.getSixSpringListForThisParticle(pid);
 
-        Vec3 force = new Vec3(0.0, 0.0, 0.0);
+        Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
         for (int s=0; s<6; s++) {
-          SpringElement aSpring = springs.element[splist[s]];
-          Vec3 pullForceFromTheSpring = aSpring.getForce(pid);
-          force.add(pullForceFromTheSpring);          
+          SpringElement aSpring = springs.getElement(splist[s]);
+          Vec3 pullForceFromTheSpring = aSpring.getPullForce(pid,q);
+          forceSum.add(pullForceFromTheSpring);          
         }
+        
         dq[6*pid+0] = ( q[6*pid+3] ) * dt; // dx = vx * dt
         dq[6*pid+1] = ( q[6*pid+4] ) * dt; // dy = vy * dt
         dq[6*pid+2] = ( q[6*pid+5] ) * dt; // dz = vz * dt
-        dq[6*pid+3] = ( force.x ) * dtm; // dvx = (fx/m)*dt 
-        dq[6*pid+4] = ( force.y ) * dtm; // dvy = (fy/m)*dt 
-        dq[6*pid+5] = ( force.z ) * dtm; // dvz = (fz/m)*dt 
+        dq[6*pid+3] = ( forceSum.x ) * dtm; // dvx = (fx/m)*dt 
+        dq[6*pid+4] = ( forceSum.y ) * dtm; // dvy = (fy/m)*dt 
+        dq[6*pid+5] = ( forceSum.z ) * dtm; // dvz = (fz/m)*dt 
       }
     }
   }
+
+
   
-  private void rungeKutta()
+  
+  void rungeKutta()
   {
     final float ONE_SIXTH = 1.0/6.0;
     final float ONE_THIRD = 1.0/3.0;
-    final int NN = 6*N_PARTICLES;  // pos.x,y,z and vel.x,y,z.
+    final int NN = 6*N_PARTICLES;  // (pos.x,y,z) and (vel.x,y,z)
   
     float[] qprev = new float[NN];
     float[] qwork = new float[NN];
@@ -743,37 +748,35 @@ class ElasticString
 
   
     //the result
-    for (int n=1; n<N_PARTICLES-1; n++) { 
+    for (int tl=1; tl<N_TRIANGLES-1; tl++) { 
       // See boundaryCondition() for end points.
-      for (int i=0; i<6; i++) { // x,y,z,vx,vy,vz
-        float newval = qprev[6*n+i] + (
-                                  ONE_SIXTH*dq1[6*n+i]
-                                + ONE_THIRD*dq2[6*n+i]
-                                + ONE_THIRD*dq3[6*n+i]
-                                + ONE_SIXTH*dq4[6*n+i]
-                                );
-        if (i==0)
-          particles.setPosX(n,newval);
-        else if (i==1)
-          particles.setPosY(n,newval);
-        else if (i==2)
-          particles.setPosZ(n,newval);
-        else if (i==3)
-          particles.setVelX(n,newval);
-        else if (i==4)
-          particles.setVelY(n,newval);
-        else if (i==5)
-          particles.setVelZ(n,newval);
-      } 
+      for (int j=0; j<3; j++) { // three verteces in a triangle.
+        int pid = particles.id(tl,j);        
+        for (int i=0; i<6; i++) { // x,y,z,vx,vy,vz
+          float newval = qprev[6*pid+i] + (
+                                    ONE_SIXTH*dq1[6*pid+i]
+                                  + ONE_THIRD*dq2[6*pid+i]
+                                  + ONE_THIRD*dq3[6*pid+i]
+                                  + ONE_SIXTH*dq4[6*pid+i]
+                                  );
+          if (i==0)
+            particles.setPosX(pid,newval);
+          else if (i==1)
+            particles.setPosY(pid,newval);
+          else if (i==2)
+            particles.setPosZ(pid,newval);
+          else if (i==3)
+            particles.setVelX(pid,newval);
+          else if (i==4)
+            particles.setVelY(pid,newval);
+          else if (i==5)
+            particles.setVelZ(pid,newval);
+        } 
+      }
     }
   }
   
-      
-  void update()
-  {
-    rungeKutta();
-    springs.update();
-  }
+
 
   void draw()
   {
@@ -826,7 +829,7 @@ float mapy(float y) {
 
 float mapz(float z) {
 //  z = min(z,z_coord_max);
-//  z = max(z,z_coord_min);
+//  z =s max(z,z_coord_min);
   return -norma(z);
 }
 
@@ -926,8 +929,7 @@ void shoot() {
       rotateY(rotor.roty);
       
       draw_axes_xyz();
-      elasticString.drawBalls();
-      elasticString.drawSticks();
+      elasticString.draw();
     popMatrix();               
     
     //if ( step%1000 == 0 ) {
