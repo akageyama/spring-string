@@ -249,9 +249,9 @@ class Particles
   {
     initialConfiguration();
     
-    for (int nt=1; nt<N_TRIANGLES-1; nt++) { // skip both ends.
+    for (int nt=0; nt<N_TRIANGLES; nt++) {
       for (int j=0; j<3; j++) {
-        int pid = id(nt,j); // particle id num.
+        int pid = id(nt,j); // particle id
         for (int s=0; s<6; s++) {  // six springs.
           // each particles is connectd by 6 springs.
           sixSpringList[pid][s] = NULL_MARK;
@@ -442,7 +442,7 @@ class SpringElement
   //  return endParticleIdBeta;
   //}
   
-  Vec3 getForce(int particleId) 
+  Vec3 getPullForce(int particleId) 
   {
     Vec3 force = new Vec3(0.0, 0.0, 0.0);
     
@@ -509,9 +509,9 @@ class Springs
     // springs connecting to a vertex
     // in the lower layer 'L'.
 
-  Springs(float characterPeriod)
+  Springs(float characteristicPeriod)
   {
-    float omega = PI*2 / characterPeriod;            
+    float omega = PI*2 / characteristicPeriod;            
     float spc = PARTICLE_MASS * omega * omega;
               // spc = spring constant:  omega^2 = spc / mass
     
