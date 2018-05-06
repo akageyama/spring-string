@@ -68,4 +68,22 @@ class SpringElement
     line(ax,ay,az,bx,by,bz);
   }
 
+
+  float energy(float[] posx,
+               float[] posy,
+               float[] posz)
+  {
+    float ax = posx[alpha];
+    float ay = posy[alpha];
+    float az = posz[alpha];
+    float bx = posx[beta ];
+    float by = posy[beta ];
+    float bz = posz[beta ];
+
+    float distance = dist(ax, ay, az, bx, by, bz);
+    float elongation = distance - EDGE_LENGTH;
+
+    return 0.5*springConst*pow(elongation,2);
+  }
+
 }

@@ -93,6 +93,11 @@ class ElasticString
           forceSum.add(pullForceFromTheSpring);
         }
 
+        Vec3 gForce = new Vec3(0.0,
+                               -GRAVITY_ACCELERATION*PARTICLE_MASS,
+                               0.0);
+        forceSum.add(gForce);
+
         dposx[pid] = velx[pid] * dt;
         dposy[pid] = vely[pid] * dt;
         dposz[pid] = velz[pid] * dt;
@@ -369,24 +374,22 @@ class ElasticString
                     particles.posy,
                     particles.posz);
   }
-  
-  //float totalEnergy() 
-  //{
-  //  float sum_kinetic = 0.0;
-  //  float sum_potential = 0.0;
-  //  float springc = spring.getConst();
-  //  for (int i=0; i<N_PARTICLES; i++) {
-  //    float posx = pos[i].x;
-  //    float posy = pos[i].y;
-  //    float posz = pos[i].z;
-  //    float velx = vel[i].x;
-  //    float vely = vel[i].y;
-  //    float velz = vel[i].z;
-  //    sum_potential += 0.5*springc*util.squaredSum(
-  //    sum_kinetic += 0.5*PARTICLE_MASS*(velx*velx
-  //                            +vely*vely
-  //                            +velz*velz);
-  //  }
-  //  float kinetic = 0.5*PARTICLE_MASS*(
-  //}
+
+
+
+  float totalEnergy()
+  {
+    float kinetic = particles.energy();
+    float potentialSpring  = springs.energy(particles.posx,
+                                            particles.posy,
+                                            particles.posz);
+
+    float ysum=0.0;
+    for (int p=0; p<N_PARTICLES; p++)
+      ysum += particles.posy[p];
+
+    float potentialGravity = PARTICLE_MASS*GRAVITY_ACCELERATION*ysum;
+    return kinetic + potentialSpring + potentialGravity;
+  }
+
 }

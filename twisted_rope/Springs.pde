@@ -138,4 +138,16 @@ class Springs
     }
   }
 
+  float energy(float[] posx,
+               float[] posy,
+               float[] posz)
+  {
+    float sum = 0.0;
+    for (int s=0; s<N_SPRINGS; s++) {
+      sum += element[s].energy(posx,posy,posz);
+    }
+    return sum;
+  }
+
+
 }

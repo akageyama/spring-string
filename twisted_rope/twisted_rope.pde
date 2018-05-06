@@ -16,13 +16,16 @@
 float time = 0.0;
 int step = 0;
 
-final int N_TRIANGLES = 20;
+final int N_TRIANGLES = 50;
 final int N_PARTICLES = N_TRIANGLES*3;
-final float EDGE_LENGTH = 0.3;
+final float EDGE_LENGTH = 0.1;
 final float PARTICLE_MASS = 0.1;
-final float SPRING_CHAR_PERIOD = 0.1; // second
+final float SPRING_CHAR_PERIOD = 0.01; // second
 
 float dt = SPRING_CHAR_PERIOD*0.01;
+
+
+final float GRAVITY_ACCELERATION = 9.80665;
 
 float x_coord_min = -3.0;
 float x_coord_max =  3.0;
@@ -84,23 +87,24 @@ void setup() {
 }
 
 
-
-void integrate() 
+void integrate()
 {
   elasticString.rungeKutta();
   step += 1;
-  if ( step%1000 == 0 ) {
-    println("step=", step, " time=", time);
-  }
 }
 
 
 void draw() {
-    
+
     rotor.update();
-    
-    for (int i=0; i<10; i++) {
+
+    for (int i=0; i<100; i++) {
       integrate();
+    }
+
+    if ( step%100 == 0 ) {
+      println("step=", step, " time=", time, 
+              " energy=", elasticString.totalEnergy());
     }
 
     background(255);
@@ -109,10 +113,10 @@ void draw() {
       rotateZ(rotor.rotz);
       rotateX(rotor.rotx);
       rotateY(rotor.roty);
-      
+
       draw_axes_xyz();
       elasticString.display();
-    popMatrix();               
+    popMatrix();
 
 }
 

@@ -205,10 +205,10 @@ class Particles
   {
     float twistFactor;
 
-    if ( t<SPRING_CHAR_PERIOD*30 )
+//  if ( t<SPRING_CHAR_PERIOD*30 )
       twistFactor = 0.0;
-    else
-      twistFactor = 0.1;
+//  else
+//    twistFactor = 0.1;
 
     float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
 
@@ -330,6 +330,20 @@ class Particles
         sphere(3);
       popMatrix();
     }
+  }
+
+
+  float energy()
+  {
+    float sum = 0.0;
+    for (int p=0; p<N_PARTICLES; p++) {
+      float vxsq = pow(velx[p],2);
+      float vysq = pow(vely[p],2);
+      float vzsq = pow(velz[p],2);
+      float vsq = vxsq + vysq + vzsq;
+      sum += 0.5*PARTICLE_MASS*vsq;
+    }
+    return sum;
   }
 
 }
