@@ -1,7 +1,7 @@
 
 class Particles
 {
-  final float END_POINTS_SEPARATION = ROPE_LENGTH*0.95;
+  final float END_POINTS_SEPARATION = ROPE_LENGTH*1.00;
   //
   //                               when N_PARTICLES = 10
   //       ||              y axis
@@ -80,7 +80,7 @@ class Particles
     //          vertex #2  o
     //                    /|\
     //                   / | \
-    //         ------------+---------------> z
+    //         ------------+---------------> y
     //                 /   |   \
     //      vertex #0 o - -|- - o vertex #1
     //       (-C0,-C1)     |     (C0,-C1)
@@ -90,15 +90,15 @@ class Particles
     final float C2 = EDGE_LENGTH / sqrt(3);
     final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
 
-    final float V0z = -C0;
-    final float V0x = -C1;
-    final float V1z =  C0;
-    final float V1x = -C1;
-    final float V2z =  0;
-    final float V2x =  C2;
-    final float V0y =  0;
-    final float V1y =  0;
-    final float V2y =  0;
+    final float V0x =   0;
+    final float V0y = -C0;
+    final float V0z = -C1;
+    final float V1x =   0;
+    final float V1y =  C0;
+    final float V1z = -C1;
+    final float V2x =   0;
+    final float V2y =   0;
+    final float V2z =  C2;
 
     assert nvert>=0 && nvert<3;
 
@@ -136,15 +136,15 @@ class Particles
     final float C2 = EDGE_LENGTH / sqrt(3);
     final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
 
-    final float V3z =   0;
-    final float V3x = -C2;
-    final float V4z =  C0;
-    final float V4x =  C1;
-    final float V5z = -C0;
-    final float V5x =  C1;
+    final float V3x =   0;
     final float V3y =   0;
-    final float V4y =   0;
-    final float V5y =   0;
+    final float V3z = -C2;
+    final float V4x =   0;
+    final float V4y =  C0;
+    final float V4z =  C1;
+    final float V5x =   0;
+    final float V5y = -C0;
+    final float V5z =  C1;
 
     assert nvert>=0 && nvert<3;
 
@@ -169,36 +169,54 @@ class Particles
 
   void initialConfiguration()
   {
-    Vec3[] coordRef = new Vec3[3]; // three verts in the triangle.
+    Vec3[] vertsAtTriangleLayer0 = new Vec3[3];
+    Vec3[] vertsAtTriangleLayer1 = new Vec3[3];
 
-    for (int tl=0; tl<N_TRIANGLES/2; tl++) {
+    for (int j=0; j<3; j++) {
+      vertsAtTriangleLayer0[j] = new Vec3(getUpperBasicTriangleVertCoord(j));
+      vertsAtTriangleLayer1[j] = new Vec3(getLowerBasicTriangleVertCoord(j));
+    }
+
+    for (int j=0; j<3; j++) {
+      int tl = 0;  // left boundary
+      int p = id(tl,j);
+      posx[p] = vertsAtTriangleLayer0[j].x;
+      posy[p] = vertsAtTriangleLayer0[j].y;
+      posz[p] = vertsAtTriangleLayer0[j].z;
+
+      tl = N_TRIANGLES - 1; // right boundary
+      p = id(tl,j);
       if ( tl%2==0 ) {
-        leftBoundaryConfiguration(0.0, coordRef);
+        posx[p] = vertsAtTriangleLayer0[j].x;
+        posy[p] = vertsAtTriangleLayer0[j].y;
+        posz[p] = vertsAtTriangleLayer0[j].z;
       }
       else {
-        leftBoundaryConfiguration2(0.0, coordRef);
-      }
-      for (int j=0; j<3; j++) {
-        int p = id(tl,j);
-        posx[p] = coordRef[j].x;
-        posy[p] = coordRef[j].y - TRIANGLE_NATURAL_SEPARATION * tl;
-        posz[p] = coordRef[j].z;
+        posx[p] = vertsAtTriangleLayer1[j].x;
+        posy[p] = vertsAtTriangleLayer1[j].y;
+        posz[p] = vertsAtTriangleLayer1[j].z;
       }
     }
 
-    for (int tl=N_TRIANGLES/2; tl<N_TRIANGLES; tl++) {
-      if ( tl%2==0 ) {
-        rightBoundaryConfiguration(0.0, coordRef);
-      }
-      else {
-        rightBoundaryConfiguration2(0.0, coordRef);
-      }
+    Vec3 verts;
+
+    float deltaX = END_POINTS_SEPARATION / (N_TRIANGLES-1);
+
+    for (int tl=1; tl<N_TRIANGLES-1; tl++) {
+      float shiftX = - END_POINTS_SEPARATION/2
+                     + deltaX * tl;
       for (int j=0; j<3; j++) {
         int p = id(tl,j);
-        posx[p] = coordRef[j].x;
-        posy[p] = coordRef[j].y
-                - TRIANGLE_NATURAL_SEPARATION * (N_TRIANGLES-1-tl);
-        posz[p] = coordRef[j].z;
+        if ( tl%2==0 ) {
+          posx[p] = vertsAtTriangleLayer0[j].x + shiftX;
+          posy[p] = vertsAtTriangleLayer0[j].y;
+          posz[p] = vertsAtTriangleLayer0[j].z;
+        }
+        else {
+          posx[p] = vertsAtTriangleLayer1[j].x + shiftX;
+          posy[p] = vertsAtTriangleLayer1[j].y;
+          posz[p] = vertsAtTriangleLayer1[j].z;
+        }
       }
     }
 
@@ -244,36 +262,12 @@ class Particles
 
     for (int j=0; j<3; j++) {
       Vec3 basic = getUpperBasicTriangleVertCoord(j);
-      float x0 = -basic.x;
-      float y0 =  basic.y;
-      float z0 =  basic.z;
-      float z =  cos(angle)*z0 + sin(angle)*x0;
-      float x = -sin(angle)*z0 + cos(angle)*x0;
-      float y = y0;
-      x -= END_POINTS_SEPARATION/2;
-      ans[j] = new Vec3(x,y,z);
-    }
-  }
-
-  void leftBoundaryConfiguration2(float t, Vec3[] ans)
-  {
-    float twistFactor;
-
-//  if ( t<SPRING_CHAR_PERIOD*30 )
-      twistFactor = 0.0;
-//  else
-//    twistFactor = 0.1;
-
-    float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
-
-    for (int j=0; j<3; j++) {
-      Vec3 basic = getLowerBasicTriangleVertCoord(j);
-      float x0 = -basic.x;
-      float y0 =  basic.y;
-      float z0 =  basic.z;
-      float z =  cos(angle)*z0 + sin(angle)*x0;
-      float x = -sin(angle)*z0 + cos(angle)*x0;
-      float y = y0;
+      float x0 = basic.x;
+      float y0 = basic.y;
+      float z0 = basic.z;
+      float x = x0;
+      float y =  cos(angle)*y0 + sin(angle)*y0;
+      float z = -sin(angle)*z0 + cos(angle)*z0;
       x -= END_POINTS_SEPARATION/2;
       ans[j] = new Vec3(x,y,z);
     }
@@ -289,42 +283,23 @@ class Particles
 //    twistFactor = 0.1;
 
     float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
+    Vec3 basic;
 
     for (int j=0; j<3; j++) {
-      Vec3 basic = getLowerBasicTriangleVertCoord(j);
+      if ( N_TRIANGLES%2==0 )
+        basic = getLowerBasicTriangleVertCoord(j);
+      else
+        basic = getUpperBasicTriangleVertCoord(j);
       float x0 = basic.x;
       float y0 = basic.y;
       float z0 = basic.z;
-      float z =  cos(angle)*z0 + sin(angle)*x0;
-      float x = -sin(angle)*z0 + cos(angle)*x0;
-      float y = y0;
+      float x = x0;
+      float y =  cos(angle)*y0 + sin(angle)*y0;
+      float z = -sin(angle)*z0 + cos(angle)*z0;
       x += END_POINTS_SEPARATION/2;
       ans[j] = new Vec3(x,y,z);
     }
-  }
 
-  void rightBoundaryConfiguration2(float t, Vec3[] ans)
-  {
-    float twistFactor;
-
-//  if ( t<SPRING_CHAR_PERIOD*30 )
-      twistFactor = 0.0;
-//  else
-//    twistFactor = 0.1;
-
-    float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
-
-    for (int j=0; j<3; j++) {
-      Vec3 basic = getUpperBasicTriangleVertCoord(j);
-      float x0 = basic.x;
-      float y0 = basic.y;
-      float z0 = basic.z;
-      float z =  cos(angle)*z0 + sin(angle)*x0;
-      float x = -sin(angle)*z0 + cos(angle)*x0;
-      float y = y0;
-      x += END_POINTS_SEPARATION/2;
-      ans[j] = new Vec3(x,y,z);
-    }
   }
 
 

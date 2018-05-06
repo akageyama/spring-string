@@ -11,10 +11,10 @@
  */
 
 
-final int N_TRIANGLES = 40;
+final int N_TRIANGLES = 60;
 final int N_PARTICLES = N_TRIANGLES*3;
 final float PARTICLE_MASS = 0.1;
-final float SPRING_CHAR_PERIOD = 0.01; // second
+final float SPRING_CHAR_PERIOD = 0.05; // second
 
 final float ROPE_LENGTH = 5.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
@@ -22,10 +22,11 @@ final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
 
 float time = 0.0;
 int step = 0;
-float dt = SPRING_CHAR_PERIOD*0.005;
+float dt = SPRING_CHAR_PERIOD*0.01;
 
 boolean frictionFlag = true;
-boolean speedLimitFlag = true;
+final float FRICTION_COEFF = 5.0;
+boolean speedLimitFlag = false;
 
 final float GRAVITY_ACCELERATION = 9.80665;
 
@@ -102,7 +103,7 @@ void draw() {
 
     rotor.update();
 
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<50; i++) {
       integrate();
     }
 

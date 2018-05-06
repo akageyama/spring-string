@@ -101,10 +101,9 @@ class ElasticString
 
         // viscous force
         if ( frictionFlag ) {
-          float frictionCoeff = 0.1;
-          float vForceX = -frictionCoeff*velx[pid];
-          float vForceY = -frictionCoeff*vely[pid];
-          float vForceZ = -frictionCoeff*velz[pid];
+          float vForceX = -FRICTION_COEFF*velx[pid];
+          float vForceY = -FRICTION_COEFF*vely[pid];
+          float vForceZ = -FRICTION_COEFF*velz[pid];
           forceSum.add(vForceX, vForceY, vForceZ);
         }
 
