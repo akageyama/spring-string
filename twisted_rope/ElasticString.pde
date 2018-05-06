@@ -111,9 +111,9 @@ class ElasticString
   {
     Vec3[] rotatedVerts = new Vec3[3];
 
-    float z0 = posz[0];
+    float x0 = posx[0];
 
-    rotatedVerts = particles.lowerBoundaryConfiguration(t,z0);
+    rotatedVerts = particles.leftBoundaryConfiguration(t,x0);
 
     for (int j=0; j<3; j++) { // three vertices at the bottom.
       posx[j] = rotatedVerts[j].x;

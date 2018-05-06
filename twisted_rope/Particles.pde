@@ -69,15 +69,15 @@ class Particles
     final float C2 = EDGE_LENGTH / sqrt(3);
     final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
 
-    final float V0x = -C0;
-    final float V0y = -C1;
-    final float V0z =  0;
-    final float V1x =  C0;
-    final float V1y = -C1;
-    final float V1z =  0;
+    final float V0x =  0;
+    final float V0y = -C0;
+    final float V0z = -C1;
+    final float V1x =  0;
+    final float V1y =  C0;
+    final float V1z = -C1;
     final float V2x =  0;
-    final float V2y =  C2;
-    final float V2z =  0;
+    final float V2y =  0;
+    final float V2z =  C2;
     //
     //  (-a/2,a/(2*sqrt(3))     (a/2,a/(2*sqrt(3))
     //               .           .
@@ -91,16 +91,16 @@ class Particles
     //                     .
     //                (0,-a/sqrt(3))
     //
-    final float V3x =   0;
-    final float V3y = -C2;
-    final float V3z =  C3;
-    final float V4x =  C0;
-    final float V4y =  C1;
-    final float V4z =  C3;
-    final float V5x = -C0;
-    final float V5y =  C1;
-    final float V5z =  C3;
-    
+    final float V3x =  C3;
+    final float V3y =   0;
+    final float V3z = -C2;
+    final float V4x =  C3;
+    final float V4y =  C0;
+    final float V4z =  C1;
+    final float V5x =  C3;
+    final float V5y = -C0;
+    final float V5z =  C1;
+
     assert nvert>=0 && nvert<6;
 
     Vec3 ans = new Vec3(0.0, 0.0, 0.0);
@@ -141,8 +141,8 @@ class Particles
     vert3 = getBasicTriangleVertCoord(3);
     vert4 = getBasicTriangleVertCoord(4);
     vert5 = getBasicTriangleVertCoord(5);
-    
-    float zHeight = vert3.z;
+
+    float xHeight = vert3.x;
 
     for (int n=0; n<N_TRIANGLES; n++) {
       if ( n%2==0 ) {
@@ -167,8 +167,8 @@ class Particles
         posy[id(n,2)] = vert5.y;
         posz[id(n,2)] = vert5.z;
       }
-      for (int i=0; i<3; i++) { // shift in z-direction.
-        posz[id(n,i)] += 2*zHeight*(n/2);
+      for (int i=0; i<3; i++) { // shift in x-direction.
+        posx[id(n,i)] += 2*xHeight*(n/2);
       }
     }
 
@@ -201,10 +201,16 @@ class Particles
     }
   }
 
-  Vec3[] lowerBoundaryConfiguration(float t, float zOrg)
+  Vec3[] leftBoundaryConfiguration(float t, float xOrg)
   {
-    float factor = 0.1;  
-    float angle = (PI*2 / SPRING_CHAR_PERIOD) * factor * t;
+    float twistFactor;
+
+    if ( t<SPRING_CHAR_PERIOD*30 )
+      twistFactor = 0.0;
+    else
+      twistFactor = 0.1;
+
+    float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
 
     Vec3 vert0, vert1, vert2;
 
@@ -214,19 +220,19 @@ class Particles
 
     Vec3[] rotatedVerts = new Vec3[3];
 
-    float x, y;
+    float y, z;
 
-    x =  cos(angle)*vert0.x + sin(angle)*vert0.y;
-    y = -sin(angle)*vert0.x + cos(angle)*vert0.y;
-    rotatedVerts[0] = new Vec3(x,y,zOrg);
+    y =  cos(angle)*vert0.y + sin(angle)*vert0.z;
+    z = -sin(angle)*vert0.y + cos(angle)*vert0.z;
+    rotatedVerts[0] = new Vec3(xOrg,y,z);
 
-    x =  cos(angle)*vert1.x + sin(angle)*vert1.y;
-    y = -sin(angle)*vert1.x + cos(angle)*vert1.y;
-    rotatedVerts[1] = new Vec3(x,y,zOrg);
+    y =  cos(angle)*vert1.y + sin(angle)*vert1.z;
+    z = -sin(angle)*vert1.y + cos(angle)*vert1.z;
+    rotatedVerts[1] = new Vec3(xOrg,y,z);
 
-    x =   cos(angle)*vert2.x + sin(angle)*vert2.y;
-    y = - sin(angle)*vert2.x + cos(angle)*vert2.y;
-    rotatedVerts[2] = new Vec3(x,y,zOrg);
+    y =   cos(angle)*vert2.y + sin(angle)*vert2.z;
+    z = - sin(angle)*vert2.z + cos(angle)*vert2.y;
+    rotatedVerts[2] = new Vec3(xOrg,y,z);
 
     return rotatedVerts;
   }
@@ -252,23 +258,23 @@ class Particles
   int id(int layerId, int vertexId)
   {
     //  each triangle's              each particle's
-    //    vertex id                        id  
-    // - - - - - - - - - - - - - - - - - - - - - - - - - - 
-    //  
-    //        2                             8   
-    //      .   .       triangle          .   .   
-    //    0 . . . 1      layerId=2      6 . . . 7 
-    //  
-    //  
-    //   2 . . . 1                     5 . . . 4 
-    //    .   .         triangle        .   .   
-    //     0              layerId=1      3   
-    //  
-    //  
-    //        2                             2   
-    //      .   .       triangle          .   .   
-    //    0 . . . 1       layerId=0     0 . . . 1 
-    //    
+    //    vertex id                        id
+    // - - - - - - - - - - - - - - - - - - - - - - - - - -
+    //
+    //        2                             8
+    //      .   .       triangle          .   .
+    //    0 . . . 1      layerId=2      6 . . . 7
+    //
+    //
+    //   2 . . . 1                     5 . . . 4
+    //    .   .         triangle        .   .
+    //     0              layerId=1      3
+    //
+    //
+    //        2                             2
+    //      .   .       triangle          .   .
+    //    0 . . . 1       layerId=0     0 . . . 1
+    //
     return 3*layerId + vertexId;
   }
 
