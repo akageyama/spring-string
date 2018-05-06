@@ -1,15 +1,15 @@
 
-class Springs 
-{  
-  private final int N_SPRINGS = 3*N_TRIANGLES + 6*(N_TRIANGLES-1);
+class Springs
+{
+  final int N_SPRINGS = 3*N_TRIANGLES + 6*(N_TRIANGLES-1);
     // 3*N_TRIANGLES: In each "hirozntal" layer, a triangle has three edges.
-    // 6*(N_TRIANGLES-1): Each vertex in the triangle has two springs 
+    // 6*(N_TRIANGLES-1): Each vertex in the triangle has two springs
     //                    connected to two vertices in the lower layer.
-  
-  private SpringElement[] element = new SpringElement[N_SPRINGS];
-    //                           
-    //               
-    //                H                           
+
+  SpringElement[] element = new SpringElement[N_SPRINGS];
+    //
+    //
+    //                H
     //              x   x  "self triangle layer"
     //            x       x
     //          H  x  x  x  H
@@ -19,7 +19,7 @@ class Springs
     //            . \   / .
     //              .\ /.   "lower triangle layer"
     //                L
-
+    //
     //
     //             U     U     U
     //        .   / \   / \   /
@@ -35,19 +35,19 @@ class Springs
 
   Springs(float characteristicPeriod)
   {
-    float omega = PI*2 / characteristicPeriod;            
+    float omega = PI*2 / characteristicPeriod;
     float spc = PARTICLE_MASS * omega * omega;
               // spc = spring constant:  omega^2 = spc / mass
 
     int sCtr = 0; // spring counter
     for (int tl=0; tl<N_TRIANGLES; tl++) { // for "hirizontal" triangles.
       int pId0 = particles.id(tl,0); // 1st vertex in the triangle
-      int pId1 = particles.id(tl,1); // 2nd 
+      int pId1 = particles.id(tl,1); // 2nd
       int pId2 = particles.id(tl,2); // 3rd
 
-      register(spc, sCtr++, pId0, pId1);       
-      register(spc, sCtr++, pId1, pId2);       
-      register(spc, sCtr++, pId2, pId0);             
+      register(spc, sCtr++, pId0, pId1);
+      register(spc, sCtr++, pId1, pId2);
+      register(spc, sCtr++, pId2, pId0);
     }
     for (int tl=1; tl<N_TRIANGLES; tl++) { // skip the lowest layer.
       for (int me=0; me<3; me++) {
@@ -92,7 +92,7 @@ class Springs
         //    2  |   0    1    2    0
         //       +--------------------
         //       |  k1   k2   me   k1
-            
+
         int k1 = (me+1) % 3;
         int k2 = (me+2) % 3;
 
@@ -108,24 +108,18 @@ class Springs
         }
       }
     }
-    println("debug: sCtr = ", sCtr);
-    
   }
-  
-  
 
-  
-  private void register(float springConst, int springId, 
+
+  void register(float springConst, int springId,
                         int alpha, int beta)
   {
     //
     // ids of particles on the both ends
     //           alpha         beta
     //             \           /
-    //              O=========O 
+    //              O=========O
     //
-
-println(" springId = ", springId);
     element[springId] = new SpringElement(springConst,alpha,beta);
 
     particles.sixSpringsAppend(alpha, springId);
@@ -133,23 +127,15 @@ println(" springId = ", springId);
   }
 
 
-
-  
-  void draw(float[] posx,
-            float[] posy,
-            float[] posz)
+  void display(float[] posx,
+               float[] posy,
+               float[] posz)
   {
     stroke(150, 100, 70);
 
     for (int s=0; s<N_SPRINGS; s++) {
-      element[s].draw(posx, posy, posz);
+      element[s].display(posx, posy, posz);
     }
   }
-  
-  SpringElement getElement(int n)
-  {
-    return element[n];
-  }
-  
 
 }

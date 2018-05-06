@@ -13,21 +13,21 @@ class Rotor {
     this.roty = roty;
     this.rotz = rotz;
   }
-  
-  
+
+
   float fit(float angle) {
     float ans = angle;
     if ( ans > 2*PI ) ans -= 2*PI;
     if ( ans < 0    ) ans += 2*PI;
     return ans;
   }
-  
+
   void update() {
     if ( toggle_keep_rotate_x ) rotx = fit(rotx + delta);
     if ( toggle_keep_rotate_y ) roty = fit(roty + delta);
     if ( toggle_keep_rotate_z ) rotz = fit(rotz + delta);
   }
-  
+
   void toggle(char key) {
     switch (key) {
       case 'x':
@@ -39,6 +39,6 @@ class Rotor {
       case 'z':
         toggle_keep_rotate_z = !toggle_keep_rotate_z;
         break;
-    }           
+    }
   }
 }

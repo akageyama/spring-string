@@ -2,86 +2,83 @@
 class ElasticString
 {
 
-
-  
-  private void rungeKuttaIncrement(int num, 
-                                   float[] posx,
-                                   float[] posy,
-                                   float[] posz,
-                                   float[] velx,
-                                   float[] vely,
-                                   float[] velz,
-                                   float[] posx1,
-                                   float[] posy1,
-                                   float[] posz1,
-                                   float[] velx1,
-                                   float[] vely1,
-                                   float[] velz1,
-                                   float[] dposx, 
-                                   float[] dposy, 
-                                   float[] dposz, 
-                                   float[] dvelx, 
-                                   float[] dvely, 
-                                   float[] dvelz, 
-                                   float factor)
+  void rungeKuttaIncrement(int num,
+                           float[] posx,
+                           float[] posy,
+                           float[] posz,
+                           float[] velx,
+                           float[] vely,
+                           float[] velz,
+                           float[] posx1,
+                           float[] posy1,
+                           float[] posz1,
+                           float[] velx1,
+                           float[] vely1,
+                           float[] velz1,
+                           float[] dposx,
+                           float[] dposy,
+                           float[] dposz,
+                           float[] dvelx,
+                           float[] dvely,
+                           float[] dvelz,
+                           float factor)
   {
-    for (int j=0; j<num; j++) {
-      posx[j] = posx1[j] + factor*dposx[j];
-      posy[j] = posy1[j] + factor*dposy[j];
-      posz[j] = posz1[j] + factor*dposz[j];
-      velx[j] = velx1[j] + factor*dvelx[j];
-      vely[j] = vely1[j] + factor*dvely[j];
-      velz[j] = velz1[j] + factor*dvelz[j];
-    }  
+    for (int p=0; p<num; p++) {
+      posx[p] = posx1[p] + factor*dposx[p];
+      posy[p] = posy1[p] + factor*dposy[p];
+      posz[p] = posz1[p] + factor*dposz[p];
+      velx[p] = velx1[p] + factor*dvelx[p];
+      vely[p] = vely1[p] + factor*dvely[p];
+      velz[p] = velz1[p] + factor*dvelz[p];
+    }
   }
 
 
-  
-  private void equationOfMotion(float posx[],
-                                float posy[],
-                                float posz[],
-                                float velx[],
-                                float vely[],
-                                float velz[],
-                                float dposx[],
-                                float dposy[],
-                                float dposz[],
-                                float dvelx[],
-                                float dvely[],
-                                float dvelz[],
-                                float dt) 
+  void equationOfMotion(float posx[],
+                        float posy[],
+                        float posz[],
+                        float velx[],
+                        float vely[],
+                        float velz[],
+                        float dposx[],
+                        float dposy[],
+                        float dposz[],
+                        float dvelx[],
+                        float dvely[],
+                        float dvelz[],
+                        float dt)
   {
     float dtm = dt / PARTICLE_MASS;
-    
-      //  u2=2                            
-      //   o            
-      //        .     upper triangle     
-      //     .      .           
-      //               o                
-      //       .     .                         
-      //           .           
+
+      //  u2=2
+      //   o
+      //        .     upper triangle
+      //     .      .
+      //               o
+      //       .     .
+      //           .
       //         o u1=0          vertex index
       //                           in a triangle
 
-      //            o m2=2           o 2         
-      //         .                  . .        
-      //      .      .             .   .     
-      //    o                     .     .   
-      //  me=0  .      .         o . . . o 
+      //            o m2=2           o 2
+      //         .                  . .
+      //      .      .             .   .
+      //    o                     .     .
+      //  me=0  .      .         o . . . o
       //            .           0         1
-      //                o m1=1        
-      //  l2=2          
-      //   o          
-      //        .          
-      //     .      .         
-      //               o        
-      //       .     .                  
+      //                o m1=1
+      //  l2=2
+      //   o
+      //        .
+      //     .      .
+      //               o
+      //       .     .
       //           .    lower triangle
-      //         o     
-      //        l1=0  
+      //         o
+      //        l1=0
 
 
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip the ends.   
+    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip both ends.
       for (int me=0; me<3; me++) {
         int pid = particles.id(tl,me); // particle id
         int[] splist = new int[6];
@@ -89,13 +86,13 @@ class ElasticString
 
         Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
         for (int s=0; s<6; s++) {
-          SpringElement aSpring = springs.getElement(splist[s]);
+          SpringElement aSpring = springs.element[splist[s]];
           Vec3 pullForceFromTheSpring = aSpring.getPullForce(pid,posx,
                                                                  posy,
                                                                  posz);
-          forceSum.add(pullForceFromTheSpring);          
+          forceSum.add(pullForceFromTheSpring);
         }
-        
+
         dposx[pid] = velx[pid] * dt;
         dposy[pid] = vely[pid] * dt;
         dposz[pid] = velz[pid] * dt;
@@ -107,33 +104,31 @@ class ElasticString
   }
 
 
-  void boundaryCondition(float t, 
+  void boundaryCondition(float t,
                          float[] posx,
                          float[] posy,
                          float[] posz)
   {
-    Vec3[] verts = new Vec3[3];
-        
+    Vec3[] rotatedVerts = new Vec3[3];
+
     float z0 = posz[0];
-    
-    verts = particles.lowerBoundaryConfiguration(t,z0);
-    
+
+    rotatedVerts = particles.lowerBoundaryConfiguration(t,z0);
+
     for (int j=0; j<3; j++) { // three vertices at the bottom.
-      posx[j] = verts[j].x;
-      posy[j] = verts[j].y;
-      posz[j] = verts[j].z;
+      posx[j] = rotatedVerts[j].x;
+      posy[j] = rotatedVerts[j].y;
+      posz[j] = rotatedVerts[j].z;
     }
-    
   }
 
-  
-  
+
   void rungeKutta()
   {
     final float ONE_SIXTH = 1.0/6.0;
     final float ONE_THIRD = 1.0/3.0;
     final int NN = N_PARTICLES;
-  
+
     float[] posxprev = new float[NN];
     float[] posxwork = new float[NN];
     float[]   dposx1 = new float[NN];
@@ -170,17 +165,14 @@ class ElasticString
     float[]   dvelz2 = new float[NN];
     float[]   dvelz3 = new float[NN];
     float[]   dvelz4 = new float[NN];
-    
-      
-    for (int n=0; n<NN; n++) {
-      posxprev[n] = particles.getPosX(n);
-      posyprev[n] = particles.getPosY(n);
-      poszprev[n] = particles.getPosZ(n);
-      velxprev[n] = particles.getVelX(n);
-      velyprev[n] = particles.getVelY(n);
-      velyprev[n] = particles.getVelZ(n);
-    }
-  
+
+    arrayCopy(particles.posx, posxprev);
+    arrayCopy(particles.posy, posyprev);
+    arrayCopy(particles.posz, poszprev);
+    arrayCopy(particles.velx, velxprev);
+    arrayCopy(particles.vely, velyprev);
+    arrayCopy(particles.velz, velzprev);
+
     //step 1
     equationOfMotion(posxprev,
                      posyprev,
@@ -195,7 +187,7 @@ class ElasticString
                      dvely1,
                      dvelz1,
                      dt);
-    rungeKuttaIncrement(NN, 
+    rungeKuttaIncrement(NN,
                         posxwork,
                         posywork,
                         poszwork,
@@ -216,13 +208,12 @@ class ElasticString
                         dvelz1,
                         0.5);
 
+    //step 2
     time += 0.5*dt;
-    boundaryCondition(time, 
+    boundaryCondition(time,
                       posxwork,
                       posywork,
                       poszwork);
-  
-    //step 2
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -257,12 +248,11 @@ class ElasticString
                         dvelz2,
                         0.5);
 
-    boundaryCondition(time, 
+    //step 3
+    boundaryCondition(time,
                       posxwork,
                       posywork,
                       poszwork);
-  
-    //step 3
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -276,7 +266,6 @@ class ElasticString
                      dvely3,
                      dvelz3,
                      dt);
-    
     rungeKuttaIncrement(NN,
                         posxwork,
                         posywork,
@@ -298,19 +287,12 @@ class ElasticString
                         dvelz3,
                         1.0);
 
-    boundaryCondition(time, 
-                      posxwork,
-                      posywork,
-                      poszwork);
-    
-
-    time += 0.5*dt;
-    boundaryCondition(time, 
-                      posxwork,
-                      posywork,
-                      poszwork);
-  
     //step 4
+    time += 0.5*dt;
+    boundaryCondition(time,
+                      posxwork,
+                      posywork,
+                      poszwork);
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -324,11 +306,10 @@ class ElasticString
                      dvely4,
                      dvelz4,
                      dt);
-    
-    //the result
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) { 
+    // weighted sum
+    for (int tl=1; tl<N_TRIANGLES-1; tl++) {
       for (int j=0; j<3; j++) { // three verteces in a triangle.
-        int pid = particles.id(tl,j);        
+        int pid = particles.id(tl,j);
         posxwork[pid] =            posxprev[pid] + (
                            ONE_SIXTH*dposx1[pid]
                          + ONE_THIRD*dposx2[pid]
@@ -367,27 +348,26 @@ class ElasticString
                          );
       }
     }
-    boundaryCondition(time, 
+    boundaryCondition(time,
                       posxwork,
                       posywork,
                       poszwork);
-  
-    particles.setPosX(posxwork);
-    particles.setPosY(posywork);
-    particles.setPosZ(poszwork);
-    particles.setVelX(velxwork);
-    particles.setVelY(velywork);
-    particles.setVelZ(velzwork);   
+
+    arrayCopy(posxwork, particles.posx);
+    arrayCopy(posywork, particles.posy);
+    arrayCopy(poszwork, particles.posz);
+    arrayCopy(velxwork, particles.velx);
+    arrayCopy(velywork, particles.vely);
+    arrayCopy(velzwork, particles.velz);
   }
-  
 
 
-  void draw()
+  void display()
   {
-    particles.draw();
-    springs.draw(particles.getPosX(),
-                 particles.getPosY(),
-                 particles.getPosZ());
+    particles.display();
+    springs.display(particles.posx,
+                    particles.posy,
+                    particles.posz);
   }
   
   //float totalEnergy() 
