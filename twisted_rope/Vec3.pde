@@ -20,6 +20,12 @@ class Vec3 {
     this.z += v.z;
   }
   
+  void add(float x, float y, float z) {
+    this.x += x;
+    this.y += y;
+    this.z += z;
+  }
+  
     
   void subtract(Vec3 v) {
     this.x -= v.x;

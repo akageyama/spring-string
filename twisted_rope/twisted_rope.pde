@@ -1,29 +1,31 @@
-/* 
+/*
 
   twisted_rope.pde
- 
- 
+
+
  Developed 
  - by Akira Kageyama (kage@port.kobe-u.ac.jp)
  - on 2018.05.06
- 
- 
+
+
  */
 
 
-//MouseCamera mouseCamera;
-
-float time = 0.0;
-int step = 0;
-
-final int N_TRIANGLES = 50;
+final int N_TRIANGLES = 40;
 final int N_PARTICLES = N_TRIANGLES*3;
-final float EDGE_LENGTH = 0.1;
 final float PARTICLE_MASS = 0.1;
 final float SPRING_CHAR_PERIOD = 0.01; // second
 
-float dt = SPRING_CHAR_PERIOD*0.01;
+final float ROPE_LENGTH = 5.0;
+final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
+final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
 
+float time = 0.0;
+int step = 0;
+float dt = SPRING_CHAR_PERIOD*0.005;
+
+boolean frictionFlag = true;
+boolean speedLimitFlag = true;
 
 final float GRAVITY_ACCELERATION = 9.80665;
 
@@ -65,7 +67,7 @@ float mapy(float y) {
 float mapz(float z) {
 //  z = min(z,z_coord_max);
 //  z =s max(z,z_coord_min);
-  return -norma(z);
+  return -norma(z); //<>//
 }
 
 
@@ -90,6 +92,8 @@ void setup() {
 void integrate()
 {
   elasticString.rungeKutta();
+  if ( speedLimitFlag ) particles.speedLimit();
+  
   step += 1;
 }
 
@@ -98,12 +102,14 @@ void draw() {
 
     rotor.update();
 
-    for (int i=0; i<100; i++) {
+    for (int i=0; i<10; i++) {
       integrate();
     }
 
     if ( step%100 == 0 ) {
-      println("step=", step, " time=", time, 
+      println("step=", step, " time=", time,
+              " friction=", frictionFlag,
+              " speed limit=", speedLimitFlag,
               " energy=", elasticString.totalEnergy());
     }
 
@@ -131,6 +137,12 @@ void keyPressed() {
     break;
   case 'z':
     rotor.toggle('z');
+    break;
+  case 'f':
+    frictionFlag = !frictionFlag;
+    break;
+  case 's':
+    speedLimitFlag = !speedLimitFlag;
     break;
   }
 }

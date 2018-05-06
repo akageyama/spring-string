@@ -93,10 +93,20 @@ class ElasticString
           forceSum.add(pullForceFromTheSpring);
         }
 
+        // gravity force
         Vec3 gForce = new Vec3(0.0,
                                -GRAVITY_ACCELERATION*PARTICLE_MASS,
                                0.0);
         forceSum.add(gForce);
+
+        // viscous force
+        if ( frictionFlag ) {
+          float frictionCoeff = 0.1;
+          float vForceX = -frictionCoeff*velx[pid];
+          float vForceY = -frictionCoeff*vely[pid];
+          float vForceZ = -frictionCoeff*velz[pid];
+          forceSum.add(vForceX, vForceY, vForceZ);
+        }
 
         dposx[pid] = velx[pid] * dt;
         dposy[pid] = vely[pid] * dt;
@@ -114,16 +124,23 @@ class ElasticString
                          float[] posy,
                          float[] posz)
   {
-    Vec3[] rotatedVerts = new Vec3[3];
+    Vec3[] left = new Vec3[3];
+    Vec3[] right = new Vec3[3];
 
-    float x0 = posx[0];
-
-    rotatedVerts = particles.leftBoundaryConfiguration(t,x0);
+    particles.leftBoundaryConfiguration(t, left);
+    particles.rightBoundaryConfiguration(t, right);
 
     for (int j=0; j<3; j++) { // three vertices at the bottom.
-      posx[j] = rotatedVerts[j].x;
-      posy[j] = rotatedVerts[j].y;
-      posz[j] = rotatedVerts[j].z;
+      int tl = 0; // triangle layer
+      int p = particles.id(tl,j);
+      posx[p] = left[j].x;
+      posy[p] = left[j].y;
+      posz[p] = left[j].z;
+      tl = N_TRIANGLES-1;
+      p = particles.id(tl,j);
+      posx[p] = right[j].x;
+      posy[p] = right[j].y;
+      posz[p] = right[j].z;
     }
   }
 
