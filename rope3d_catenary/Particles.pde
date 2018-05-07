@@ -1,6 +1,7 @@
 
 class Particles
 {
+  float twistAngle;
   final float END_POINTS_SEPARATION = ROPE_LENGTH*1.00;
   //
   //                               when N_PARTICLES = 10
@@ -249,23 +250,32 @@ class Particles
     }
   }
 
-  void leftBoundaryConfiguration(float t, Vec3[] ans)
+  void leftBoundaryConfiguration(float t, float dt, Vec3[] ans)
   {
     float twistFactor;
 
-//  if ( t<SPRING_CHAR_PERIOD*30 )
+    if ( twistFlag )
+      twistFactor = 0.001;
+    else
       twistFactor = 0.0;
-//  else
-//    twistFactor = 0.1;
 
-    float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
+    float edgeShift;
+    float edgeShiftAmp = 0.2;
+    float timeForShift = 1.0;
+    if ( t<timeForShift )
+      edgeShift = edgeShiftAmp*sin(t/timeForShift*PI/2);
+    else
+      edgeShift = edgeShiftAmp;
+
+    twistAngle += (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * dt;
+    float angle = twistAngle;
 
     for (int j=0; j<3; j++) {
       Vec3 basic = getUpperBasicTriangleVertCoord(j);
       float x0 = basic.x;
       float y0 = basic.y;
       float z0 = basic.z;
-      float x = x0;
+      float x = x0 + edgeShift;
       float y =  cos(angle)*y0 + sin(angle)*y0;
       float z = -sin(angle)*z0 + cos(angle)*z0;
       x -= END_POINTS_SEPARATION/2;
@@ -273,16 +283,25 @@ class Particles
     }
   }
 
-  void rightBoundaryConfiguration(float t, Vec3[] ans)
+  void rightBoundaryConfiguration(float t, float dt, Vec3[] ans)
   {
     float twistFactor;
 
-//  if ( t<SPRING_CHAR_PERIOD*30 )
+    if ( twistFlag )
+      twistFactor = 0.001;
+    else
       twistFactor = 0.0;
-//  else
-//    twistFactor = 0.1;
 
-    float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
+    float edgeShift;
+    float edgeShiftAmp = 0.2;
+    float timeForShift = 1.0;
+    if ( t<timeForShift )
+      edgeShift = edgeShiftAmp*sin(t/timeForShift*PI/2);
+    else
+      edgeShift = edgeShiftAmp;
+
+    twistAngle += (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * dt;
+    float angle = twistAngle;
     Vec3 basic;
 
     for (int j=0; j<3; j++) {
@@ -293,7 +312,7 @@ class Particles
       float x0 = basic.x;
       float y0 = basic.y;
       float z0 = basic.z;
-      float x = x0;
+      float x = x0 - edgeShift;
       float y =  cos(angle)*y0 + sin(angle)*y0;
       float z = -sin(angle)*z0 + cos(angle)*z0;
       x += END_POINTS_SEPARATION/2;
@@ -411,19 +430,4 @@ class Particles
     return sum;
   }
 
-  void speedLimit()
-  {
-    final float VMAX = 0.1*EDGE_LENGTH/SPRING_CHAR_PERIOD;
-    for (int p=0; p<N_PARTICLES; p++) {
-      float vxsq = pow(velx[p],2);
-      float vysq = pow(vely[p],2);
-      float vzsq = pow(velz[p],2);
-      float v = sqrt(vxsq + vysq + vzsq);
-      if ( v>VMAX ) {
-       velx[p] *= (VMAX/v);
-       vely[p] *= (VMAX/v);
-       velz[p] *= (VMAX/v);
-      }
-    }
-  }
 }

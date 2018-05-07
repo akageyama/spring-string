@@ -118,7 +118,8 @@ class ElasticString
   }
 
 
-  void boundaryCondition(float t,
+  void boundaryCondition(float time,
+                         float dt,
                          float[] posx,
                          float[] posy,
                          float[] posz)
@@ -126,8 +127,8 @@ class ElasticString
     Vec3[] left = new Vec3[3];
     Vec3[] right = new Vec3[3];
 
-    particles.leftBoundaryConfiguration(t, left);
-    particles.rightBoundaryConfiguration(t, right);
+    particles.leftBoundaryConfiguration(time, dt, left);
+    particles.rightBoundaryConfiguration(time, dt, right);
 
     for (int j=0; j<3; j++) { // three vertices at the bottom.
       int tl = 0; // triangle layer
@@ -232,6 +233,7 @@ class ElasticString
     //step 2
     time += 0.5*dt;
     boundaryCondition(time,
+                      dt,
                       posxwork,
                       posywork,
                       poszwork);
@@ -271,6 +273,7 @@ class ElasticString
 
     //step 3
     boundaryCondition(time,
+                      dt,
                       posxwork,
                       posywork,
                       poszwork);
@@ -311,6 +314,7 @@ class ElasticString
     //step 4
     time += 0.5*dt;
     boundaryCondition(time,
+                      dt,
                       posxwork,
                       posywork,
                       poszwork);
@@ -370,6 +374,7 @@ class ElasticString
       }
     }
     boundaryCondition(time,
+                      dt,
                       posxwork,
                       posywork,
                       poszwork);

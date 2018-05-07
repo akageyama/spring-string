@@ -11,10 +11,11 @@
  */
 
 
-final int N_TRIANGLES = 60;
+final int N_TRIANGLES = 40;
 final int N_PARTICLES = N_TRIANGLES*3;
-final float PARTICLE_MASS = 0.1;
-final float SPRING_CHAR_PERIOD = 0.05; // second
+final float ROPE_MASS = 0.1;
+final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
+final float SPRING_CHAR_PERIOD = 0.001; // second
 
 final float ROPE_LENGTH = 5.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
@@ -24,9 +25,9 @@ float time = 0.0;
 int step = 0;
 float dt = SPRING_CHAR_PERIOD*0.01;
 
-boolean frictionFlag = true;
-final float FRICTION_COEFF = 5.0;
-boolean speedLimitFlag = false;
+boolean frictionFlag = false;
+final float FRICTION_COEFF = 0.1;
+boolean twistFlag = false;
 
 final float GRAVITY_ACCELERATION = 9.80665;
 
@@ -93,8 +94,7 @@ void setup() {
 void integrate()
 {
   elasticString.rungeKutta();
-  if ( speedLimitFlag ) particles.speedLimit();
-  
+
   step += 1;
 }
 
@@ -103,14 +103,14 @@ void draw() {
 
     rotor.update();
 
-    for (int i=0; i<50; i++) {
+    for (int i=0; i<40; i++) {
       integrate();
     }
 
     if ( step%100 == 0 ) {
       println("step=", step, " time=", time,
               " friction=", frictionFlag,
-              " speed limit=", speedLimitFlag,
+              " twist=", twistFlag,
               " energy=", elasticString.totalEnergy());
     }
 
@@ -142,8 +142,8 @@ void keyPressed() {
   case 'f':
     frictionFlag = !frictionFlag;
     break;
-  case 's':
-    speedLimitFlag = !speedLimitFlag;
+  case 't':
+    twistFlag = !twistFlag;
     break;
   }
 }
