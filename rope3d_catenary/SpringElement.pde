@@ -35,6 +35,11 @@ class SpringElement
 
     float pullForceAmplitude = springConst * (distance - EDGE_LENGTH);
 
+    if (nonlinearSpringFlag) {
+      float factor = springConst*EDGE_LENGTH;
+      pullForceAmplitude += 0.4*factor * pow(distance/EDGE_LENGTH - 1, 3);
+    }
+
     if (particleId==alpha) {
       force = new Vec3((bx-ax)/distance,
                        (by-ay)/distance,

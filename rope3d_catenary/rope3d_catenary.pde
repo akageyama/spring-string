@@ -23,11 +23,14 @@ final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
 
 float time = 0.0;
 int step = 0;
-float dt = SPRING_CHAR_PERIOD*0.01;
+// float dt = SPRING_CHAR_PERIOD*0.01;
+float dt = SPRING_CHAR_PERIOD*0.001;
 
 boolean frictionFlag = false;
 final float FRICTION_COEFF = 0.1;
 boolean twistFlag = false;
+
+boolean nonlinearSpringFlag = true;
 
 final float GRAVITY_ACCELERATION = 9.80665;
 
