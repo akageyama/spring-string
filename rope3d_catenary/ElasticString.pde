@@ -119,7 +119,8 @@ class ElasticString
       }
     }
 
-    for (int tl=0; tl<N_TRIANGLES; tl+=N_TRIANGLES-1) {
+    for (int l=0; l<2; l++) {
+      int tl = l*(N_TRIANGLES-1);
       for (int me=0; me<3; me++) {
         int pid = particles.id(tl,me);
         int[] splist = new int[6];
@@ -495,11 +496,8 @@ class ElasticString
                        Vec3[] verts,
                        Vec3[] unitVec)
   {
-    Vec3 vecC0;
-
-    vecC0 = vecSubtract(verts[0], center);
-//    Vec3 vecC0 = new Vec3(vecSubtract(verts[0], center));
-    Vec3 vecC1 = new Vec3(vecSubtract(verts[1], center));
+    Vec3 vecC0 = vecSubtract(verts[0], center);
+    Vec3 vecC1 = vecSubtract(verts[1], center);
 
     Vec3 v = vecC0;
     v.normalize();

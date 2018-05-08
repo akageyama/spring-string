@@ -21,7 +21,7 @@ final float SPRING_CHAR_PERIOD = 0.002; // second
 final float ROPE_LENGTH = 3.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
 final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
-final float TUBE_RADIUS = EDGE_LENGTH / sqrt(3);
+final float TUBE_RADIUS = EDGE_LENGTH / sqrt(3.0);
 
 final float SPRING_CUT_LIMIT_LENGTH = 1.3*EDGE_LENGTH;
 
@@ -108,7 +108,8 @@ void draw() {
 
     rotor.update();
 
-    for (int i=0; i<200; i++) {
+!   for (int i=0; i<200; i++) {
+    for (int i=0; i<1; i++) {
       integrate();
     }
 
