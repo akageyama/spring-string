@@ -33,12 +33,14 @@ class SpringElement
 
     float distance = dist(ax, ay, az, bx, by, bz);
 
+    if ( distance >= SPRING_CUT_LIMIT_LENGTH ) springConst = 0.0; // cut off.
+
     float pullForceAmplitude = springConst * (distance - EDGE_LENGTH);
 
-    if (nonlinearSpringFlag) {
-      float factor = springConst*EDGE_LENGTH;
-      pullForceAmplitude += factor * pow(distance/EDGE_LENGTH - 1, 3);
-    }
+//  if (nonlinearSpringFlag) {
+//    float factor = springConst*EDGE_LENGTH;
+//    pullForceAmplitude += factor * pow(distance/EDGE_LENGTH - 1, 3);
+//  }
 
     if (particleId==alpha) {
       force = new Vec3((bx-ax)/distance,
@@ -64,13 +66,16 @@ class SpringElement
                float[] posy,
                float[] posz)
   {
-    float ax = mapx(posx[alpha]);
-    float ay = mapy(posy[alpha]);
-    float az = mapz(posz[alpha]);
-    float bx = mapx(posx[beta]);
-    float by = mapy(posy[beta]);
-    float bz = mapz(posz[beta]);
-    line(ax,ay,az,bx,by,bz);
+
+    if ( springConst > 0.0 ) {
+      float ax = mapx(posx[alpha]);
+      float ay = mapy(posy[alpha]);
+      float az = mapz(posz[alpha]);
+      float bx = mapx(posx[beta]);
+      float by = mapy(posy[beta]);
+      float bz = mapz(posz[beta]);
+      line(ax,ay,az,bx,by,bz);
+    }
   }
 
 

@@ -235,48 +235,31 @@ class Particles
     }
   }
 
-  void leftBoundaryConfiguration(float t, Vec3[] ans)
+  void leftBoundaryConfiguration(float t, int j, float[] yz)
   {
 
     float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
 
-    for (int j=0; j<3; j++) {
-      Vec3 basic = getBasicTriangleKind01Coord(j);
-      float x0 = posx[id(0,j)];
-      float y0 = basic.y;
-      float z0 = basic.z;
-//      float x = x0 + edgeShift;
-      float x = x0;
-      float y =  cos(angle)*y0 + sin(angle)*z0;
-      float z = -sin(angle)*y0 + cos(angle)*z0;
-      // x -= ROPE_LENGTH/2;
-      ans[j] = new Vec3(x,y,z);
-    }
+    Vec3 basic = getBasicTriangleKind01Coord(j);
+    float y0 = basic.y;
+    float z0 = basic.z;
+    yz[0] =  cos(angle)*y0 + sin(angle)*z0;
+    yz[1] = -sin(angle)*y0 + cos(angle)*z0;
   }
 
-  void rightBoundaryConfiguration(float t, Vec3[] ans)
+  void rightBoundaryConfiguration(float t, int j, float[] yz)
   {
     float angle = -(PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
-
     Vec3 basic;
 
-    for (int j=0; j<3; j++) {
-      if ( N_TRIANGLES%2==0 )
-        basic = getBasicTriangleKind02Coord(j);
-      else
-        basic = getBasicTriangleKind01Coord(j);
-      // float x0 = basic.x;
-      float x0 = posx[id(N_TRIANGLES-1,j)];
-      float y0 = basic.y;
-      float z0 = basic.z;
-      // float x = x0 - edgeShift;
-      float x = x0;
-      float y =  cos(angle)*y0 + sin(angle)*z0;
-      float z = -sin(angle)*y0 + cos(angle)*z0;
-      // x += ROPE_LENGTH/2;
-      ans[j] = new Vec3(x,y,z);
-    }
-
+    if ( N_TRIANGLES%2==0 )
+      basic = getBasicTriangleKind02Coord(j);
+    else
+      basic = getBasicTriangleKind01Coord(j);
+    float y0 = basic.y;
+    float z0 = basic.z;
+    yz[0] =  cos(angle)*y0 + sin(angle)*z0;
+    yz[1] = -sin(angle)*y0 + cos(angle)*z0;
   }
 
 
