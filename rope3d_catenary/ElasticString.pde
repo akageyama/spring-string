@@ -78,7 +78,7 @@ class ElasticString
       //        l1=0
 
 
-    for (int tl=0; tl<N_TRIANGLES; tl++) { // triangle layer. skip both ends.
+    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip both ends.
       for (int me=0; me<3; me++) {
         int pid = particles.id(tl,me); // particle id
         int[] splist = new int[6];
@@ -118,6 +118,52 @@ class ElasticString
         dvelz[pid] = forceSum.z * dtm;
       }
     }
+
+    for (int tl=0; tl<N_TRIANGLES; tl+=N_TRIANGLES-1) {
+      for (int me=0; me<3; me++) {
+        int pid = particles.id(tl,me);
+        int[] splist = new int[6];
+        splist = particles.getConnectedSpingListForThisParticle(pid);
+
+        Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
+
+        int numCounterpart
+            = particles.numberOfConnectedSpringsToThisParticle(pid);
+        for (int s=0; s<numCounterpart; s++) {
+          SpringElement aSpring = springs.element[splist[s]];
+          Vec3 pullForceFromTheSpring = aSpring.getPullForce(pid,posx,
+                                                                 posy,
+                                                                 posz);
+          forceSum.add(pullForceFromTheSpring);
+        }
+
+//      // gravity force
+//      Vec3 gForce = new Vec3(0.0,
+//                             -GRAVITY_ACCELERATION*PARTICLE_MASS,
+//                             0.0);
+//      forceSum.add(gForce);
+
+        // viscous force
+        if ( frictionFlag ) {
+          float vForceX = -FRICTION_COEFF*velx[pid];
+//        float vForceY = -FRICTION_COEFF*vely[pid];
+//        float vForceZ = -FRICTION_COEFF*velz[pid];
+//        forceSum.add(vForceX, vForceY, vForceZ);
+          forceSum.add(vForceX, 0.0, 0.0);
+        }
+
+        forceSum.y = 0.0;
+        forceSum.z = 0.0;
+
+        dposx[pid] = velx[pid] * dt;
+        dposy[pid] = vely[pid] * dt;
+        dposz[pid] = velz[pid] * dt;
+        dvelx[pid] = forceSum.x * dtm;
+        dvely[pid] = forceSum.y * dtm;
+        dvelz[pid] = forceSum.z * dtm;
+      }
+    }
+
   }
 
 
@@ -130,21 +176,30 @@ class ElasticString
                          float[] vely,
                          float[] velz)
   {
-    for (int j=0; j<3; j++) { // three vertices at the bottom.
-      int p = particles.id(0,j);
-      float[] yz = new float[2];
-      particles.leftBoundaryConfiguration(time, j, yz);
-      posy[p] = yz[0];
-      posz[p] = yz[1];
+    Vec3[] verts = new Vec3[3];
+    float phaseShift;
 
-      velx[p] *=0.9;
+    for (int l=0; l<2; l++) {
+      int tl = l*(N_TRIANGLES-1);
+      for (int j=0; j<3; j++) {
+        int p = particles.id(tl,j);
+        verts[j] = new Vec3(posx[p], posy[p], posz[p]);
+      }
 
-      particles.rightBoundaryConfiguration(time, j, yz);
-      p = particles.id(N_TRIANGLES-1,j);
-      posy[p] = yz[0];
-      posz[p] = yz[1];
+      if (tl%2==0)
+        phaseShift = 0.0;
+      else
+        phaseShift = (PI*2)/6;
 
-      velx[p] *=0.9;
+      twist(time, verts, phaseShift);
+
+      for (int j=0; j<3; j++) {
+        int p = particles.id(tl,j);
+        Vec3 vert = verts[j];
+        posx[p] = vert.x;
+        posy[p] = vert.y;
+        posz[p] = vert.z;
+      }
     }
   }
 
@@ -412,6 +467,77 @@ class ElasticString
                     particles.posz);
   }
 
+
+  Vec3 calcCenter(Vec3[] verts)
+  {
+    Vec3 center = new Vec3(0.0, 0.0, 0.0);
+    for (int j=0; j<3; j++) {
+      center.add(verts[j]);
+    }
+    center.divide(3.0);
+
+    return center;
+  }
+
+  Vec3 vecSubtract(Vec3 a, Vec3 b) // a-b
+  {
+    Vec3 ans = new Vec3(0.0, 0.0, 0.0);
+
+    ans.x = a.x - b.x;
+    ans.y = a.y - b.y;
+    ans.z = a.z - b.z;
+
+    return ans;
+  }
+
+
+  void calcUnitVectors(Vec3 center,
+                       Vec3[] verts,
+                       Vec3[] unitVec)
+  {
+    Vec3 vecC0;
+
+    vecC0 = vecSubtract(verts[0], center);
+//    Vec3 vecC0 = new Vec3(vecSubtract(verts[0], center));
+    Vec3 vecC1 = new Vec3(vecSubtract(verts[1], center));
+
+    Vec3 v = vecC0;
+    v.normalize();
+    unitVec[0] = new Vec3(v);
+
+    v = vecC0.crossProduct(vecC1); // along the axis
+    v.normalize();
+
+    unitVec[1] = v.crossProduct(unitVec[0]);
+  }
+
+
+  void twist(float time, Vec3[] verts, float phaseShift)
+  {
+    Vec3 center;
+    Vec3 vecC0, vecC1;
+    Vec3[] unitVec = new Vec3[2]; //
+
+    center = calcCenter(verts);
+    calcUnitVectors(center,
+                    verts,
+                    unitVec);
+
+    float deltaPhi = (PI*2) / 3;
+    float r = TUBE_RADIUS;
+
+    for (int j=0; j<3; j++) {
+      float phi = j*deltaPhi + phaseShift;
+      float x, y, z;
+      x = center.x + r*unitVec[0].x*cos(phi)
+                   + r*unitVec[1].x*sin(phi);
+      y = center.y + r*unitVec[0].y*cos(phi)
+                   + r*unitVec[1].y*sin(phi);
+      z = center.z + r*unitVec[0].z*cos(phi)
+                   + r*unitVec[1].z*sin(phi);
+      verts[j] = new Vec3(x,y,z);
+    }
+  }
 
 
   float totalEnergy()
