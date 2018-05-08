@@ -125,7 +125,10 @@ class ElasticString
                          float dt,
                          float[] posx,
                          float[] posy,
-                         float[] posz)
+                         float[] posz,
+                         float[] velx,
+                         float[] vely,
+                         float[] velz)
   {
     for (int j=0; j<3; j++) { // three vertices at the bottom.
       int p = particles.id(0,j);
@@ -134,10 +137,14 @@ class ElasticString
       posy[p] = yz[0];
       posz[p] = yz[1];
 
+      velx[p] *=0.9;
+
       particles.rightBoundaryConfiguration(time, j, yz);
       p = particles.id(N_TRIANGLES-1,j);
       posy[p] = yz[0];
       posz[p] = yz[1];
+
+      velx[p] *=0.9;
     }
   }
 
@@ -233,7 +240,10 @@ class ElasticString
                       dt,
                       posxwork,
                       posywork,
-                      poszwork);
+                      poszwork,
+                      velxwork,
+                      velywork,
+                      velzwork);
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -273,7 +283,10 @@ class ElasticString
                       dt,
                       posxwork,
                       posywork,
-                      poszwork);
+                      poszwork,
+                      velxwork,
+                      velywork,
+                      velzwork);
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -314,7 +327,10 @@ class ElasticString
                       dt,
                       posxwork,
                       posywork,
-                      poszwork);
+                      poszwork,
+                      velxwork,
+                      velywork,
+                      velzwork);
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -374,7 +390,10 @@ class ElasticString
                       dt,
                       posxwork,
                       posywork,
-                      poszwork);
+                      poszwork,
+                      velxwork,
+                      velywork,
+                      velzwork);
 
     arrayCopy(posxwork, particles.posx);
     arrayCopy(posywork, particles.posy);

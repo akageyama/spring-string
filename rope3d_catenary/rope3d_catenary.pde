@@ -11,17 +11,18 @@
  */
 
 
-final int N_TRIANGLES = 60;
+//final int N_TRIANGLES = 100;
+final int N_TRIANGLES = 50;
 final int N_PARTICLES = N_TRIANGLES*3;
-final float ROPE_MASS = 0.20;
+final float ROPE_MASS = 0.40;
 final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
-final float SPRING_CHAR_PERIOD = 0.01; // second
+final float SPRING_CHAR_PERIOD = 0.002; // second
 
 final float ROPE_LENGTH = 3.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
 final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
 
-final float SPRING_CUT_LIMIT_LENGTH = 1.2*EDGE_LENGTH;
+final float SPRING_CUT_LIMIT_LENGTH = 1.3*EDGE_LENGTH;
 
 float time = 0.0;
 int step = 0;
@@ -31,8 +32,8 @@ boolean frictionFlag = true;
 final float FRICTION_COEFF = 0.01;
 float twistFactor = 0.01;
 
-final float GRAVITY_ACCELERATION = 9.80665;
-// final float GRAVITY_ACCELERATION = 0.0;
+// final float GRAVITY_ACCELERATION = 9.80665;
+final float GRAVITY_ACCELERATION = 0.0;
 
 float x_coord_min = -3.0;
 float x_coord_max =  3.0;
