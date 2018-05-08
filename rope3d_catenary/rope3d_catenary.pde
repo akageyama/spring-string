@@ -11,28 +11,28 @@
  */
 
 
-final int N_TRIANGLES = 40;
+final int N_TRIANGLES = 50;
 final int N_PARTICLES = N_TRIANGLES*3;
-final float ROPE_MASS = 0.1;
+final float ROPE_MASS = 0.10;
 final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
-final float SPRING_CHAR_PERIOD = 0.001; // second
+final float SPRING_CHAR_PERIOD = 0.01; // second
 
-final float ROPE_LENGTH = 5.0;
+final float ROPE_LENGTH = 3.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
 final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
 
 float time = 0.0;
 int step = 0;
-// float dt = SPRING_CHAR_PERIOD*0.01;
-float dt = SPRING_CHAR_PERIOD*0.001;
+float dt = SPRING_CHAR_PERIOD*0.01;
 
 boolean frictionFlag = false;
 final float FRICTION_COEFF = 0.1;
-boolean twistFlag = false;
+float twistFactor = 0.01;
 
-boolean nonlinearSpringFlag = true;
+boolean nonlinearSpringFlag = false;
 
 final float GRAVITY_ACCELERATION = 9.80665;
+// final float GRAVITY_ACCELERATION = 0.0;
 
 float x_coord_min = -3.0;
 float x_coord_max =  3.0;
@@ -106,14 +106,13 @@ void draw() {
 
     rotor.update();
 
-    for (int i=0; i<40; i++) {
+    for (int i=0; i<200; i++) {
       integrate();
     }
 
     if ( step%100 == 0 ) {
       println("step=", step, " time=", time,
               " friction=", frictionFlag,
-              " twist=", twistFlag,
               " energy=", elasticString.totalEnergy());
     }
 
@@ -144,9 +143,6 @@ void keyPressed() {
     break;
   case 'f':
     frictionFlag = !frictionFlag;
-    break;
-  case 't':
-    twistFlag = !twistFlag;
     break;
   }
 }

@@ -78,14 +78,17 @@ class ElasticString
       //        l1=0
 
 
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip both ends.
+    for (int tl=0; tl<N_TRIANGLES; tl++) { // triangle layer. skip both ends.
       for (int me=0; me<3; me++) {
         int pid = particles.id(tl,me); // particle id
         int[] splist = new int[6];
-        splist = particles.getSixSpringListForThisParticle(pid);
+        splist = particles.getConnectedSpingListForThisParticle(pid);
 
         Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
-        for (int s=0; s<6; s++) {
+
+        int numCounterpart
+            = particles.numberOfConnectedSpringsToThisParticle(pid);
+        for (int s=0; s<numCounterpart; s++) {
           SpringElement aSpring = springs.element[splist[s]];
           Vec3 pullForceFromTheSpring = aSpring.getPullForce(pid,posx,
                                                                  posy,
@@ -127,8 +130,8 @@ class ElasticString
     Vec3[] left = new Vec3[3];
     Vec3[] right = new Vec3[3];
 
-    particles.leftBoundaryConfiguration(time, dt, left);
-    particles.rightBoundaryConfiguration(time, dt, right);
+    particles.leftBoundaryConfiguration(time, left);
+    particles.rightBoundaryConfiguration(time, right);
 
     for (int j=0; j<3; j++) { // three vertices at the bottom.
       int tl = 0; // triangle layer
@@ -332,7 +335,7 @@ class ElasticString
                      dvelz4,
                      dt);
     // weighted sum
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) {
+    for (int tl=0; tl<N_TRIANGLES; tl++) {
       for (int j=0; j<3; j++) { // three verteces in a triangle.
         int pid = particles.id(tl,j);
         posxwork[pid] =            posxprev[pid] + (

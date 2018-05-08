@@ -37,7 +37,7 @@ class SpringElement
 
     if (nonlinearSpringFlag) {
       float factor = springConst*EDGE_LENGTH;
-      pullForceAmplitude += 0.4*factor * pow(distance/EDGE_LENGTH - 1, 3);
+      pullForceAmplitude += factor * pow(distance/EDGE_LENGTH - 1, 3);
     }
 
     if (particleId==alpha) {

@@ -122,8 +122,8 @@ class Springs
     //
     element[springId] = new SpringElement(springConst,alpha,beta);
 
-    particles.sixSpringsAppend(alpha, springId);
-    particles.sixSpringsAppend(beta,  springId);
+    particles.connectedSpringsAppend(alpha, springId);
+    particles.connectedSpringsAppend(beta,  springId);
   }
 
 

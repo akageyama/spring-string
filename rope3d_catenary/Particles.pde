@@ -1,8 +1,6 @@
 
 class Particles
 {
-  float twistAngle;
-  final float END_POINTS_SEPARATION = ROPE_LENGTH*1.00;
   //
   //                               when N_PARTICLES = 10
   //       ||              y axis
@@ -31,7 +29,7 @@ class Particles
   float[] vely = new float[N_PARTICLES];
   float[] velz = new float[N_PARTICLES];
 
-  int[][] sixSpringList = new int[N_PARTICLES][6];
+  int[][] connectedSpringList = new int[N_PARTICLES][6];
             // each particle are connected with 6 springs.
             //
             //    upper layer
@@ -73,7 +71,7 @@ class Particles
         //
 
 
-  Vec3 getUpperBasicTriangleVertCoord(int nvert)
+  Vec3 getBasicTriangleKind01Coord(int nvert)
   {
     //                     z
     //                     |
@@ -121,7 +119,7 @@ class Particles
     return ans;
   }
 
-  Vec3 getLowerBasicTriangleVertCoord(int nvert)
+  Vec3 getBasicTriangleKind02Coord(int nvert)
   {
     //
     //           (-C0,C1)       (C0,C1)
@@ -170,53 +168,40 @@ class Particles
 
   void initialConfiguration()
   {
-    Vec3[] vertsAtTriangleLayer0 = new Vec3[3];
-    Vec3[] vertsAtTriangleLayer1 = new Vec3[3];
+    Vec3[] vertsAtTriangleKind01 = new Vec3[3];
+    Vec3[] vertsAtTriangleKind02 = new Vec3[3];
 
     for (int j=0; j<3; j++) {
-      vertsAtTriangleLayer0[j] = new Vec3(getUpperBasicTriangleVertCoord(j));
-      vertsAtTriangleLayer1[j] = new Vec3(getLowerBasicTriangleVertCoord(j));
+      vertsAtTriangleKind01[j] = new Vec3(getBasicTriangleKind01Coord(j));
+      vertsAtTriangleKind02[j] = new Vec3(getBasicTriangleKind02Coord(j));
     }
 
     for (int j=0; j<3; j++) {
       int tl = 0;  // left boundary
       int p = id(tl,j);
-      posx[p] = vertsAtTriangleLayer0[j].x;
-      posy[p] = vertsAtTriangleLayer0[j].y;
-      posz[p] = vertsAtTriangleLayer0[j].z;
-
-      tl = N_TRIANGLES - 1; // right boundary
-      p = id(tl,j);
-      if ( tl%2==0 ) {
-        posx[p] = vertsAtTriangleLayer0[j].x;
-        posy[p] = vertsAtTriangleLayer0[j].y;
-        posz[p] = vertsAtTriangleLayer0[j].z;
-      }
-      else {
-        posx[p] = vertsAtTriangleLayer1[j].x;
-        posy[p] = vertsAtTriangleLayer1[j].y;
-        posz[p] = vertsAtTriangleLayer1[j].z;
-      }
+      posx[p] = vertsAtTriangleKind01[j].x - ROPE_LENGTH/2;
+      posy[p] = vertsAtTriangleKind01[j].y;
+      posz[p] = vertsAtTriangleKind01[j].z;
     }
 
     Vec3 verts;
 
-    float deltaX = END_POINTS_SEPARATION / (N_TRIANGLES-1);
+    float deltaX = TRIANGLE_NATURAL_SEPARATION;
 
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) {
-      float shiftX = - END_POINTS_SEPARATION/2
+    for (int tl=1; tl<N_TRIANGLES; tl++) {
+      float shiftX = - ROPE_LENGTH/2
                      + deltaX * tl;
       for (int j=0; j<3; j++) {
         int p = id(tl,j);
         if ( tl%2==0 ) {
-          posx[p] = vertsAtTriangleLayer0[j].x + shiftX;
-          posy[p] = vertsAtTriangleLayer0[j].y;
-          posz[p] = vertsAtTriangleLayer0[j].z;
+          posx[p] = vertsAtTriangleKind01[j].x + shiftX;
+          posy[p] = vertsAtTriangleKind01[j].y;
+          posz[p] = vertsAtTriangleKind01[j].z;
         }
         else {
-          posx[p] = vertsAtTriangleLayer1[j].x + shiftX;
-          posy[p] = vertsAtTriangleLayer1[j].y;
-          posz[p] = vertsAtTriangleLayer1[j].z;
+          posx[p] = vertsAtTriangleKind02[j].x + shiftX;
+          posy[p] = vertsAtTriangleKind02[j].y;
+          posz[p] = vertsAtTriangleKind02[j].z;
         }
       }
     }
@@ -250,72 +235,45 @@ class Particles
     }
   }
 
-  void leftBoundaryConfiguration(float t, float dt, Vec3[] ans)
+  void leftBoundaryConfiguration(float t, Vec3[] ans)
   {
-    float twistFactor;
 
-    if ( twistFlag )
-      twistFactor = 0.001;
-    else
-      twistFactor = 0.0;
-
-    float edgeShift;
-    float edgeShiftAmp = 0.2;
-    float timeForShift = 1.0;
-    if ( t<timeForShift )
-      edgeShift = edgeShiftAmp*sin(t/timeForShift*PI/2);
-    else
-      edgeShift = edgeShiftAmp;
-
-    twistAngle += (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * dt;
-    float angle = twistAngle;
+    float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
 
     for (int j=0; j<3; j++) {
-      Vec3 basic = getUpperBasicTriangleVertCoord(j);
-      float x0 = basic.x;
+      Vec3 basic = getBasicTriangleKind01Coord(j);
+      float x0 = posx[id(0,j)];
       float y0 = basic.y;
       float z0 = basic.z;
-      float x = x0 + edgeShift;
-      float y =  cos(angle)*y0 + sin(angle)*y0;
-      float z = -sin(angle)*z0 + cos(angle)*z0;
-      x -= END_POINTS_SEPARATION/2;
+//      float x = x0 + edgeShift;
+      float x = x0;
+      float y =  cos(angle)*y0 + sin(angle)*z0;
+      float z = -sin(angle)*y0 + cos(angle)*z0;
+      // x -= ROPE_LENGTH/2;
       ans[j] = new Vec3(x,y,z);
     }
   }
 
-  void rightBoundaryConfiguration(float t, float dt, Vec3[] ans)
+  void rightBoundaryConfiguration(float t, Vec3[] ans)
   {
-    float twistFactor;
+    float angle = -(PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
 
-    if ( twistFlag )
-      twistFactor = 0.001;
-    else
-      twistFactor = 0.0;
-
-    float edgeShift;
-    float edgeShiftAmp = 0.2;
-    float timeForShift = 1.0;
-    if ( t<timeForShift )
-      edgeShift = edgeShiftAmp*sin(t/timeForShift*PI/2);
-    else
-      edgeShift = edgeShiftAmp;
-
-    twistAngle += (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * dt;
-    float angle = twistAngle;
     Vec3 basic;
 
     for (int j=0; j<3; j++) {
       if ( N_TRIANGLES%2==0 )
-        basic = getLowerBasicTriangleVertCoord(j);
+        basic = getBasicTriangleKind02Coord(j);
       else
-        basic = getUpperBasicTriangleVertCoord(j);
-      float x0 = basic.x;
+        basic = getBasicTriangleKind01Coord(j);
+      // float x0 = basic.x;
+      float x0 = posx[id(N_TRIANGLES-1,j)];
       float y0 = basic.y;
       float z0 = basic.z;
-      float x = x0 - edgeShift;
-      float y =  cos(angle)*y0 + sin(angle)*y0;
-      float z = -sin(angle)*z0 + cos(angle)*z0;
-      x += END_POINTS_SEPARATION/2;
+      // float x = x0 - edgeShift;
+      float x = x0;
+      float y =  cos(angle)*y0 + sin(angle)*z0;
+      float z = -sin(angle)*y0 + cos(angle)*z0;
+      // x += ROPE_LENGTH/2;
       ans[j] = new Vec3(x,y,z);
     }
 
@@ -333,7 +291,7 @@ class Particles
         int pid = id(nt,j); // particle id
         for (int s=0; s<6; s++) {  // six springs.
           // each particles is connectd by 6 springs.
-          sixSpringList[pid][s] = NULL_MARK;
+          connectedSpringList[pid][s] = NULL_MARK;
         }
       }
     }
@@ -363,24 +321,24 @@ class Particles
   }
 
 
-  int[] getSixSpringListForThisParticle(int particleId)
+  int[] getConnectedSpingListForThisParticle(int particleId)
   {
     int[] list = new int[6];
 
     for (int i=0; i<6; i++) {
-      list[i] = sixSpringList[particleId][i];
+      list[i] = connectedSpringList[particleId][i];
     }
 
     return list;
   }
 
 
-  int numberOfAlreadyRegisteredSpring(int particleId)
+  int numberOfConnectedSpringsToThisParticle(int particleId)
   {
     int ans;
 
     for (int i=0; i<6; i++) {
-      int val = sixSpringList[particleId][i];
+      int val = connectedSpringList[particleId][i];
       if ( val==NULL_MARK ) {
         ans = i;
         return ans;
@@ -392,13 +350,13 @@ class Particles
   }
 
 
-  void sixSpringsAppend(int particleId, int springid)
+  void connectedSpringsAppend(int particleId, int springid)
   {
-    int num = numberOfAlreadyRegisteredSpring(particleId);
+    int num = numberOfConnectedSpringsToThisParticle(particleId);
 
     assert num >=0 && num<6;
 
-    sixSpringList[particleId][num] = springid;
+    connectedSpringList[particleId][num] = springid;
   }
 
 
