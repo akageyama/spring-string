@@ -143,6 +143,17 @@ class ElasticString
 //                             -GRAVITY_ACCELERATION*PARTICLE_MASS,
 //                             0.0);
 //      forceSum.add(gForce);
+//
+        // tension of the end points
+        float tensionX;
+        if (l==0) {
+          tensionX = -0.01*SPRING_CONST*(posx[pid] + ROPE_LENGTH/2);
+        }
+        else {
+          tensionX = -0.01*SPRING_CONST*(posx[pid] - ROPE_LENGTH/2);
+        }
+
+        forceSum.add(tensionX, 0.0, 0.0);
 
         // viscous force
         if ( frictionFlag ) {
@@ -168,8 +179,7 @@ class ElasticString
   }
 
 
-  void boundaryCondition(float time,
-                         float dt,
+  void boundaryCondition(float angle,
                          float[] posx,
                          float[] posy,
                          float[] posz,
@@ -178,7 +188,6 @@ class ElasticString
                          float[] velz)
   {
     Vec3[] verts = new Vec3[3];
-    float phaseShift;
 
     for (int l=0; l<2; l++) {
       int tl = l*(N_TRIANGLES-1);
@@ -187,12 +196,10 @@ class ElasticString
         verts[j] = new Vec3(posx[p], posy[p], posz[p]);
       }
 
-      if (tl==0)
-        phaseShift = 0.0;
+      if (l==0)
+        twist(angle/2, verts);
       else
-        phaseShift = particles.getEndPointInitialPhase();
-
-      twist(time, verts);
+        twist(-angle/2, verts);
 
       for (int j=0; j<3; j++) {
         int p = particles.id(tl,j);
@@ -200,10 +207,6 @@ class ElasticString
         posx[p] = vert.x;
         posy[p] = vert.y;
         posz[p] = vert.z;
-// debug
-//if (tl>0) {
-//println("tl=",tl," p=", p, " x,y,z = ", vert.x, vert.y, vert.z);
-//}
       }
     }
   }
@@ -296,8 +299,8 @@ class ElasticString
 
     //step 2
     time += 0.5*dt;
-    boundaryCondition(time,
-                      dt,
+    float angle = EDGE_TWIST_RATE_OMEGA * dt * 0.5;
+    boundaryCondition(angle,
                       posxwork,
                       posywork,
                       poszwork,
@@ -339,8 +342,7 @@ class ElasticString
                         0.5);
 
     //step 3
-    boundaryCondition(time,
-                      dt,
+    boundaryCondition(angle,
                       posxwork,
                       posywork,
                       poszwork,
@@ -383,8 +385,8 @@ class ElasticString
 
     //step 4
     time += 0.5*dt;
-    boundaryCondition(time,
-                      dt,
+    angle = EDGE_TWIST_RATE_OMEGA * dt * 0.5;
+    boundaryCondition(angle,
                       posxwork,
                       posywork,
                       poszwork,
@@ -446,8 +448,7 @@ class ElasticString
                          );
       }
     }
-    boundaryCondition(time,
-                      dt,
+    boundaryCondition(angle,
                       posxwork,
                       posywork,
                       poszwork,
@@ -514,7 +515,7 @@ class ElasticString
   }
 
 
-  void twist(float time, Vec3[] verts)
+  void twist(float angle, Vec3[] verts)
   {
     Vec3 center;
     Vec3 vecC0, vecC1;
@@ -529,7 +530,7 @@ class ElasticString
     float r = TUBE_RADIUS;
 
     for (int j=0; j<3; j++) {
-      float phi = j*deltaPhi;
+      float phi = angle + j*deltaPhi;
       float x, y, z;
       x = center.x + r*unitVec[0].x*cos(phi)
                    + r*unitVec[1].x*sin(phi);

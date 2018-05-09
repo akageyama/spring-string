@@ -5,6 +5,13 @@ class Springs
     // 3*N_TRIANGLES: In each "hirozntal" layer, a triangle has three edges.
     // 6*(N_TRIANGLES-1): Each vertex in the triangle has two springs
     //                    connected to two vertices in the lower layer.
+    // 2: Tension force applying to the two ends.
+    //
+    //           triangle
+    //              tl=0 tl=1 tl=2            tl=N_TRIANGLES-1
+    //               /   /   /               /
+    //      x - - - o===o===o= ... =o===o===o - - - x
+    //
 
   SpringElement[] element = new SpringElement[N_SPRINGS];
     //
@@ -33,11 +40,9 @@ class Springs
     // springs connecting to a vertex
     // in the lower layer 'L'.
 
-  Springs(float characteristicPeriod)
+  Springs()
   {
-    float omega = PI*2 / characteristicPeriod;
-    float spc = PARTICLE_MASS * omega * omega;
-              // spc = spring constant:  omega^2 = spc / mass
+    float spc = SPRING_CONST;
 
     int sCtr = 0; // spring counter
     for (int tl=0; tl<N_TRIANGLES; tl++) { // for "hirizontal" triangles.

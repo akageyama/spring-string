@@ -3,27 +3,31 @@
   twisted_rope.pde
 
 
- Developed 
+ Developed
  - by Akira Kageyama (kage@port.kobe-u.ac.jp)
- - on 2018.05.06
+ - on 2018.05.09
 
 
  */
 
 
 //final int N_TRIANGLES = 100;
-//final int N_TRIANGLES = 50;
-final int N_TRIANGLES = 4;
+ final int N_TRIANGLES = 20;
+// final int N_TRIANGLES = 4;
 final int N_PARTICLES = N_TRIANGLES*3;
-final float ROPE_MASS = 0.40;
+final float ROPE_MASS = 0.001;
 final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
-final float SPRING_CHAR_PERIOD = 0.002; // second
+final float SPRING_CHAR_PERIOD = 0.001; // second
+final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
+final float SPRING_CHAR_OMEGA_SQ = PI*2 / SPRING_CHAR_PERIOD;
+final float SPRING_CONST = PARTICLE_MASS * SPRING_CHAR_OMEGA_SQ;
 
-final float ROPE_LENGTH = 3.0;
+final float ROPE_LENGTH = 5.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
 final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
 final float TUBE_RADIUS = EDGE_LENGTH / sqrt(3.0);
 
+//final float SPRING_CUT_LIMIT_LENGTH = 1.2*EDGE_LENGTH;
 final float SPRING_CUT_LIMIT_LENGTH = 1.3*EDGE_LENGTH;
 
 float time = 0.0;
@@ -31,8 +35,12 @@ int step = 0;
 float dt = SPRING_CHAR_PERIOD*0.01;
 
 boolean frictionFlag = true;
-final float FRICTION_COEFF = 0.01;
-float twistFactor = 0.01;
+final float FRICTION_COEFF = 0.0001;
+
+final float SOUND_SPEED = EDGE_LENGTH / SPRING_CHAR_PERIOD;
+final float SOUND_WAVE_TURN_OVER_TIME = ROPE_LENGTH / SOUND_SPEED;
+final float EDGE_TWIST_TIME = SOUND_WAVE_TURN_OVER_TIME * 100;
+final float EDGE_TWIST_RATE_OMEGA = PI*2 / EDGE_TWIST_TIME;
 
 // final float GRAVITY_ACCELERATION = 9.80665;
 final float GRAVITY_ACCELERATION = 0.0;
@@ -49,7 +57,7 @@ Rotor rotor = new Rotor(0,0,0);
 
 Particles particles = new Particles();
 
-Springs springs = new Springs(SPRING_CHAR_PERIOD);
+Springs springs = new Springs();
 
 ElasticString elasticString = new ElasticString();
 
@@ -109,8 +117,8 @@ void draw() {
 
     rotor.update();
 
-//  for (int i=0; i<200; i++) {
-    for (int i=0; i<1; i++) {
+//    for (int i=0; i<200; i++) {
+    for (int i=0; i<2000; i++) {
       integrate();
     }
 
