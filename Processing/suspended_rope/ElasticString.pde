@@ -126,10 +126,8 @@ class ElasticString
                          float[] posz)
   {
     Vec3[] verts = new Vec3[3];
-//    Vec3[] right = new Vec3[3];
 
-    particles.upperBoundaryConfiguration(dt, verts);
-//    particles.lowerBoundaryConfiguration(t, right);
+    particles.upperBoundaryConfiguration(t, verts);
 
     for (int j=0; j<3; j++) { // three vertices at the bottom.
       int tl = 0; // triangle layer
@@ -137,11 +135,6 @@ class ElasticString
       posx[p] = verts[j].x;
       posy[p] = verts[j].y;
       posz[p] = verts[j].z;
-//    tl = N_TRIANGLES-1;
-//    p = particles.id(tl,j);
-//    posx[p] = right[j].x;
-//    posy[p] = right[j].y;
-//    posz[p] = right[j].z;
     }
   }
 

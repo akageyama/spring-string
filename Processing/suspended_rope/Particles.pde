@@ -4,26 +4,6 @@ class Particles
   float twistAngle=0.0;
 
   final float END_POINTS_SEPARATION = ROPE_LENGTH*1.0;
-  //
-  //                               when N_PARTICLES = 10
-  //       ||              y axis
-  //       ||                |
-  //       \/                |   E ND_POINTS_SEPARATION
-  //    gravity in           | /
-  //   -y direction          |/
-  //                  -------^-------
-  //                /        |        \
-  //         ------T---------+---------T---------> x axis
-  //    triangle #0 \        |        / 9
-  //                 T       |       T
-  //      triangle #1 \      |      / 8
-  //                   T     |     T
-  //                  2 \    |    / 7
-  //                     T   |   T
-  //                    3 \  |  / 6
-  //                       T---T
-  //                      4  | 5
-  //                         |
 
   float[] posx = new float[N_PARTICLES];
   float[] posy = new float[N_PARTICLES];
@@ -90,7 +70,6 @@ class Particles
     final float C0 = EDGE_LENGTH / 2;
     final float C1 = EDGE_LENGTH / (2*sqrt(3.0));
     final float C2 = EDGE_LENGTH / sqrt(3);
-    final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
 
     final float V0x = -C0;
     final float V0y = -C1;
@@ -138,7 +117,6 @@ class Particles
     final float C0 = EDGE_LENGTH / 2;
     final float C1 = EDGE_LENGTH / (2*sqrt(3.0));
     final float C2 = EDGE_LENGTH / sqrt(3);
-    final float C3 = EDGE_LENGTH * sqrt(2.0/3.0);
 
     final float V3x =   0;
     final float V3y = -C2;
@@ -221,6 +199,10 @@ class Particles
           posy[p] = vertsAtTriangleKind02[j].y;
           posz[p] = vertsAtTriangleKind02[j].z - shiftZ;
         }
+
+        posx[p] += EDGE_LENGTH*random(0.01);
+        posy[p] += EDGE_LENGTH*random(0.01);
+        posz[p] += EDGE_LENGTH*random(0.01);
       }
     }
 
@@ -261,14 +243,9 @@ class Particles
     }
   }
 
-  void upperBoundaryConfiguration(float dt, Vec3[] ans)
+  void upperBoundaryConfiguration(float time, Vec3[] ans)
   {
-    if ( twistFlag )
-      twistAngle += ROPE_TWIST_OMEGA * dt;
-    else
-      twistAngle = 0.0;
-
-    float angle = twistAngle;
+    float angle = EDGE_TWIST_RATE_OMEGA * time;
 
     for (int j=0; j<3; j++) {
       Vec3 basic = new Vec3(getBasicTriangleKind01Coord(j));
@@ -280,33 +257,6 @@ class Particles
       ans[j] = new Vec3(x,y,z0);
     }
   }
-
-//  void lowerBoundaryConfiguration(float t, Vec3[] ans)
-//  {
-//    float twistFactor;
-//
-////  if ( t<SPRING_CHAR_PERIOD*30 )
-//      twistFactor = 0.0;
-////  else
-////    twistFactor = 0.1;
-//
-//    float angle = (PI*2 / SPRING_CHAR_PERIOD) * twistFactor * t;
-//    Vec3 basic;
-//
-//    for (int j=0; j<3; j++) {
-//      if ( N_TRIANGLES%2==0 )
-//        basic = getBasicTriangleKind02Coord(j);
-//      else
-//        basic = getBasicTriangleKind01Coord(j);
-//      float x0 = basic.x;
-//      float y0 = basic.y;
-//      float z0 = basic.z - END_POINTS_SEPARATION;
-//      float x =  cos(angle)*x0 + sin(angle)*y0;
-//      float y = -sin(angle)*x0 + cos(angle)*y0;
-//      ans[j] = new Vec3(x,y,z0);
-//    }
-//
-//  }
 
 
   Particles()

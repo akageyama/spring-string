@@ -33,6 +33,9 @@ class SpringElement
 
     float distance = dist(ax, ay, az, bx, by, bz);
 
+    if ( distance >= EDGE_ELONGATION_CUT_LIMIT )
+      springConst = 0.0;
+
     float pullForceAmplitude = springConst * (distance - EDGE_LENGTH);
 
     if (particleId==alpha) {
@@ -59,13 +62,15 @@ class SpringElement
                float[] posy,
                float[] posz)
   {
-    float ax = mapx(posx[alpha]);
-    float ay = mapy(posy[alpha]);
-    float az = mapz(posz[alpha]);
-    float bx = mapx(posx[beta]);
-    float by = mapy(posy[beta]);
-    float bz = mapz(posz[beta]);
-    line(ax,ay,az,bx,by,bz);
+    if ( springConst > 0.0) {
+      float ax = mapx(posx[alpha]);
+      float ay = mapy(posy[alpha]);
+      float az = mapz(posz[alpha]);
+      float bx = mapx(posx[beta]);
+      float by = mapy(posy[beta]);
+      float bz = mapz(posz[beta]);
+      line(ax,ay,az,bx,by,bz);
+    }
   }
 
 
