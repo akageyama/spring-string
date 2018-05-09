@@ -51,7 +51,7 @@ Particles particles = new Particles();
 
 Springs springs = new Springs(SPRING_CHAR_PERIOD);
 
-ElasticString elasticString = new ElasticString();
+Motion motion = new Motion();
 
 
 
@@ -99,7 +99,7 @@ void setup() {
 
 void integrate()
 {
-  elasticString.rungeKutta();
+  motion.rungeKutta();
 
   step += 1;
 }
@@ -116,7 +116,7 @@ void draw() {
     if ( step%100 == 0 ) {
       println("step=", step, " time=", time,
               " friction=", frictionFlag,
-              " energy=", elasticString.totalEnergy());
+              " energy=", motion.totalEnergy());
     }
 
     background(255);
@@ -127,7 +127,7 @@ void draw() {
       rotateY(rotor.roty);
 
       draw_axes_xyz();
-      elasticString.display();
+      motion.display();
     popMatrix();
 
 }

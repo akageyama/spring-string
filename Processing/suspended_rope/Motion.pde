@@ -1,5 +1,5 @@
 
-class ElasticString
+class Motion
 {
 
   void rungeKuttaIncrement(int num,
