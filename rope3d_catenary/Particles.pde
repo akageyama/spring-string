@@ -8,6 +8,8 @@ class Particles
   float[] vely = new float[N_PARTICLES];
   float[] velz = new float[N_PARTICLES];
 
+  float saveEndPointInitialPhase;
+
   int[][] connectedSpringList = new int[N_PARTICLES][6];
             // each particle are connected with 6 springs.
             //
@@ -49,6 +51,11 @@ class Particles
         //      p=0                     p=1
         //
 
+
+  float getEndPointInitialPhase() {
+    return saveEndPointInitialPhase;
+  }
+
   void init()
   {
     float deltaX = TRIANGLE_NATURAL_SEPARATION;
@@ -78,6 +85,10 @@ class Particles
         posx[p] = shiftX;
         posy[p] = TUBE_RADIUS*cos(phi);
         posz[p] = TUBE_RADIUS*sin(phi);
+
+        if ( tl==N_TRIANGLES-1 && j==0 ) {
+          saveEndPointInitialPhase = phi;
+        }
       }
     }
 

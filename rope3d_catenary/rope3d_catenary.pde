@@ -12,7 +12,8 @@
 
 
 //final int N_TRIANGLES = 100;
-final int N_TRIANGLES = 50;
+//final int N_TRIANGLES = 50;
+final int N_TRIANGLES = 4;
 final int N_PARTICLES = N_TRIANGLES*3;
 final float ROPE_MASS = 0.40;
 final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
@@ -108,7 +109,7 @@ void draw() {
 
     rotor.update();
 
-!   for (int i=0; i<200; i++) {
+//  for (int i=0; i<200; i++) {
     for (int i=0; i<1; i++) {
       integrate();
     }

@@ -187,12 +187,12 @@ class ElasticString
         verts[j] = new Vec3(posx[p], posy[p], posz[p]);
       }
 
-      if (tl%2==0)
+      if (tl==0)
         phaseShift = 0.0;
       else
-        phaseShift = (PI*2)/6;
+        phaseShift = particles.getEndPointInitialPhase();
 
-      twist(time, verts, phaseShift);
+      twist(time, verts);
 
       for (int j=0; j<3; j++) {
         int p = particles.id(tl,j);
@@ -200,6 +200,10 @@ class ElasticString
         posx[p] = vert.x;
         posy[p] = vert.y;
         posz[p] = vert.z;
+// debug
+//if (tl>0) {
+//println("tl=",tl," p=", p, " x,y,z = ", vert.x, vert.y, vert.z);
+//}
       }
     }
   }
@@ -510,11 +514,11 @@ class ElasticString
   }
 
 
-  void twist(float time, Vec3[] verts, float phaseShift)
+  void twist(float time, Vec3[] verts)
   {
     Vec3 center;
     Vec3 vecC0, vecC1;
-    Vec3[] unitVec = new Vec3[2]; //
+    Vec3[] unitVec = new Vec3[2];
 
     center = calcCenter(verts);
     calcUnitVectors(center,
@@ -525,7 +529,7 @@ class ElasticString
     float r = TUBE_RADIUS;
 
     for (int j=0; j<3; j++) {
-      float phi = j*deltaPhi + phaseShift;
+      float phi = j*deltaPhi;
       float x, y, z;
       x = center.x + r*unitVec[0].x*cos(phi)
                    + r*unitVec[1].x*sin(phi);
