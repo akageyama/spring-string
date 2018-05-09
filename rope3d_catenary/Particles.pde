@@ -86,6 +86,10 @@ class Particles
         posy[p] = TUBE_RADIUS*cos(phi);
         posz[p] = TUBE_RADIUS*sin(phi);
 
+        posx[p] += random(TUBE_RADIUS*0.01);
+        posy[p] += random(TUBE_RADIUS*0.01);
+        posz[p] += random(TUBE_RADIUS*0.01);
+
         if ( tl==N_TRIANGLES-1 && j==0 ) {
           saveEndPointInitialPhase = phi;
         }
