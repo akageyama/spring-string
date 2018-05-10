@@ -11,11 +11,16 @@
  */
 
 
+import peasy.PeasyCam;
+
+PeasyCam cam;
+
+
 final int N_TRIANGLES = 14;
 final int N_PARTICLES = N_TRIANGLES*3;
 final float ROPE_MASS = 0.01;
 final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
-final float SPRING_CHAR_PERIOD = 0.01; // second
+final float SPRING_CHAR_PERIOD = 0.001; // second
 
 final float ROPE_LENGTH = 1.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
@@ -44,8 +49,6 @@ float y_coord_max = x_coord_max;
 float z_coord_min = x_coord_min;
 float z_coord_max = x_coord_max;
 
-
-Rotor rotor = new Rotor(PI/2,0,0);
 
 Particles particles = new Particles();
 
@@ -94,7 +97,9 @@ void setup() {
   size(800,800,P3D);
   background(255);
   frameRate(60);
+  cam = new PeasyCam(this, 1000.0);
 }
+
 
 
 void integrate()
@@ -106,8 +111,6 @@ void integrate()
 
 
 void draw() {
-
-    rotor.update();
 
     for (int i=0; i<10; i++) {
       integrate();
@@ -121,10 +124,8 @@ void draw() {
 
     background(255);
     pushMatrix();
-      translate(width/2,height/2);
-      rotateZ(rotor.rotz);
-      rotateX(rotor.rotx);
-      rotateY(rotor.roty);
+      //translate(width/2,height/2);
+      rotateX(PI/2);
 
       draw_axes_xyz();
       motion.display();
@@ -135,15 +136,6 @@ void draw() {
 
 void keyPressed() {
   switch (key) {
-  case 'x':
-    rotor.toggle('x');
-    break;
-  case 'y':
-    rotor.toggle('y');
-    break;
-  case 'z':
-    rotor.toggle('z');
-    break;
   case 'f':
     frictionFlag = !frictionFlag;
     break;
@@ -151,16 +143,7 @@ void keyPressed() {
 }
 
 
-void keyReleased() {
-  switch (key) {
-  case 'x':
-    rotor.toggle('x');
-    break;
-  case 'y':
-    rotor.toggle('y');
-    break;
-  case 'z':
-    rotor.toggle('z');
-    break;
-  }
-}
+//void keyReleased() {
+//  switch (key) {
+//  }
+//}
