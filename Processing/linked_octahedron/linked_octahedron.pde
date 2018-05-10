@@ -1,15 +1,18 @@
 /*
 
-  twisted_rope.pde
+  linked_octahedron.pde
 
 
  Developed
  - by Akira Kageyama (kage@port.kobe-u.ac.jp)
- - on 2018.05.09
+ - on 2018.05.10
 
 
  */
 
+import peasy.PeasyCam;
+
+PeasyCam cam;
 
 //final int N_TRIANGLES = 100;
  final int N_TRIANGLES = 30;
@@ -52,8 +55,6 @@ float y_coord_max = x_coord_max;
 float z_coord_min = x_coord_min;
 float z_coord_max = x_coord_max;
 
-
-Rotor rotor = new Rotor(0,0,0); 
 
 Particles particles = new Particles();
 
@@ -99,9 +100,10 @@ void draw_axes_xyz() { //<>//
 
 
 void setup() {
-  size(800,700,P3D);
+  size(800,800,P3D);
   background(255);
   frameRate(60);
+  cam = new PeasyCam(this, 1000);
 }
 
 
@@ -115,14 +117,12 @@ void integrate()
 
 void draw() {
 
-    rotor.update();
-
 //    for (int i=0; i<200; i++) {
     for (int i=0; i<2000; i++) {
       integrate();
     }
 
-    if ( step%100 == 0 ) {
+    if ( step%500 == 0 ) {
       println("step=", step, " time=", time,
               " friction=", frictionFlag,
               " energy=", motion.totalEnergy());
@@ -130,10 +130,8 @@ void draw() {
 
     background(255);
     pushMatrix();
-      translate(width/2,height/2);
-      rotateZ(rotor.rotz);
-      rotateX(rotor.rotx);
-      rotateY(rotor.roty);
+//      translate(width/2,height/2);
+//      rotateX(rotor.rotx);
 
       draw_axes_xyz();
       motion.display();
@@ -144,32 +142,13 @@ void draw() {
 
 void keyPressed() {
   switch (key) {
-  case 'x':
-    rotor.toggle('x');
-    break;
-  case 'y':
-    rotor.toggle('y');
-    break;
-  case 'z':
-    rotor.toggle('z');
-    break;
   case 'f':
     frictionFlag = !frictionFlag;
     break;
   }
 }
 
-
-void keyReleased() {
-  switch (key) {
-  case 'x':
-    rotor.toggle('x');
-    break;
-  case 'y':
-    rotor.toggle('y');
-    break;
-  case 'z':
-    rotor.toggle('z');
-    break;
-  }
-}
+//void keyReleased() {
+//  switch (key) {
+//  }
+//}
