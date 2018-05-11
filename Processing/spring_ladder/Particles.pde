@@ -53,10 +53,19 @@ class Particles
       }
     }
 
-    for (int i=0; i<N_PARTICLES; i++) {
-      velx[i] = 0.0;
-      vely[i] = 0.0;
-      velz[i] = 0.0;
+    float omega = LADDER_TWIST_RATE_OMEGA;
+    float vy0 = omega*SPRING_NATURAL_LENGTH/2;
+    for (int l=0; l<N_PAIRS; l++) {
+      for (int j=0; j<2; j++) {
+        int p = id(l,j);
+        velx[p] = 0.0;
+  //    vely[p] = 0.0;
+        velz[p] = 0.0;
+        if (j%2==0)
+          vely[p] = vy0;
+        else
+          vely[p] = -vy0;
+      }
     }
   }
 
