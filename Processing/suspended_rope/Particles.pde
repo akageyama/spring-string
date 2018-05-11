@@ -54,207 +54,68 @@ class Particles
         //
 
 
-  Vec3 getBasicTriangleKind01Coord(int nvert)
-  {
-    //                     y
-    //                     |
-    //                     | (z,x) = (0,C2)
-    //          vertex #2  o
-    //                    /|\
-    //                   / | \
-    //         ------------+---------------> x
-    //                 /   |   \
-    //      vertex #0 o - -|- - o vertex #1
-    //       (-C0,-C1)     |     (C0,-C1)
-    //
-    final float C0 = EDGE_LENGTH / 2;
-    final float C1 = EDGE_LENGTH / (2*sqrt(3.0));
-    final float C2 = EDGE_LENGTH / sqrt(3);
-
-    final float V0x = -C0;
-    final float V0y = -C1;
-    final float V0z =   0;
-    final float V1x =  C0;
-    final float V1y = -C1;
-    final float V1z =   0;
-    final float V2x =   0;
-    final float V2y =  C2;
-    final float V2z =   0;
-
-    assert nvert>=0 && nvert<3;
-
-    Vec3 ans = new Vec3(0.0, 0.0, 0.0);
-
-    switch(nvert)
-    {
-      case 0:
-        ans = new Vec3(V0x, V0y, V0z);
-        break;
-      case 1:
-        ans = new Vec3(V1x, V1y, V1z);
-        break;
-      case 2:
-        ans = new Vec3(V2x, V2y, V2z);
-        break;
-    }
-
-    return ans;
-  }
-
-  Vec3 getBasicTriangleKind02Coord(int nvert)
-  {
-    //                     y
-    //                     |
-    //                     |
-    //           (-C0,C1)  |    (C0,C1)
-    //              #5 o - - - o #4
-    //                  \     /    ---> x
-    //                   \   /
-    //                    \ /
-    //                     o #3
-    //            (z,x)=(0,-C2)
-    //
-    final float C0 = EDGE_LENGTH / 2;
-    final float C1 = EDGE_LENGTH / (2*sqrt(3.0));
-    final float C2 = EDGE_LENGTH / sqrt(3);
-
-    final float V3x =   0;
-    final float V3y = -C2;
-    final float V3z =   0;
-    final float V4x =  C0;
-    final float V4y =  C1;
-    final float V4z =   0;
-    final float V5x = -C0;
-    final float V5y =  C1;
-    final float V5z =   0;
-
-    assert nvert>=0 && nvert<3;
-
-    Vec3 ans = new Vec3(0.0, 0.0, 0.0);
-
-    switch(nvert)
-    {
-      case 0:
-        ans = new Vec3(V3x, V3y, V3z);
-        break;
-      case 1:
-        ans = new Vec3(V4x, V4y, V4z);
-        break;
-      case 2:
-        ans = new Vec3(V5x, V5y, V5z);
-        break;
-    }
-
-    return ans;
-  }
-
 
   void initialConfiguration()
   {
-    Vec3[] vertsAtTriangleKind01 = new Vec3[3];
-    Vec3[] vertsAtTriangleKind02 = new Vec3[3];
+    Vec3[] verts = new Vec3[3];
 
+    upperBoundaryConfiguration(0.0, verts);
     for (int j=0; j<3; j++) {
-      vertsAtTriangleKind01[j] = new Vec3(getBasicTriangleKind01Coord(j));
-      vertsAtTriangleKind02[j] = new Vec3(getBasicTriangleKind02Coord(j));
+      int l = 0;  // uppermost end
+      int p = id(l,j);
+      posx[p] = verts[j].x;
+      posy[p] = verts[j].y;
+      posz[p] = verts[j].z;
     }
-
-    for (int j=0; j<3; j++) {
-      int tl = 0;  // uppermost end
-      int p = id(tl,j);
-      posx[p] = vertsAtTriangleKind01[j].x;
-      posy[p] = vertsAtTriangleKind01[j].y;
-      posz[p] = vertsAtTriangleKind01[j].z;
-
-//    tl = N_TRIANGLES - 1; // lowermost end
-//    p = id(tl,j);
-//    if ( tl%2==0 ) {
-//      posx[p] = vertsAtTriangleKind01[j].x;
-//      posy[p] = vertsAtTriangleKind01[j].y;
-//      posz[p] = vertsAtTriangleKind01[j].z - END_POINTS_SEPARATION;
-//    }
-//    else {
-//      posx[p] = vertsAtTriangleKind02[j].x;
-//      posy[p] = vertsAtTriangleKind02[j].y;
-//      posz[p] = vertsAtTriangleKind02[j].z - END_POINTS_SEPARATION;
-//    }
-    }
-
-    Vec3 verts;
 
     float deltaZ = END_POINTS_SEPARATION / (N_TRIANGLES-1);
+    float angle;
 
-//  for (int tl=1; tl<N_TRIANGLES-1; tl++) {
-    for (int tl=1; tl<N_TRIANGLES; tl++) {
-      float shiftZ = deltaZ * tl;
+    for (int l=1; l<N_TRIANGLES; l++) {
       for (int j=0; j<3; j++) {
-        int p = id(tl,j);
-        if ( tl%2==0 ) {
-          posx[p] = vertsAtTriangleKind01[j].x;
-          posy[p] = vertsAtTriangleKind01[j].y;
-          posz[p] = vertsAtTriangleKind01[j].z - shiftZ;
-        }
-        else {
-          posx[p] = vertsAtTriangleKind02[j].x;
-          posy[p] = vertsAtTriangleKind02[j].y;
-          posz[p] = vertsAtTriangleKind02[j].z - shiftZ;
-        }
+        int p = id(l,j);
+        if ( l%2==0 )
+          angle = (TWO_PI/3)*j;
+        else
+          angle = (TWO_PI/3)*j + TWO_PI/6;
+        posx[p] = ROPE_RADIUS*cos(angle);
+        posy[p] = ROPE_RADIUS*sin(angle);
+        posz[p] = - deltaZ*l;
 
-        posx[p] += EDGE_LENGTH*random(0.01);
-        posy[p] += EDGE_LENGTH*random(0.01);
-        posz[p] += EDGE_LENGTH*random(0.01);
+        posx[p] += EDGE_LENGTH*random(0.02);
+        posy[p] += EDGE_LENGTH*random(0.02);
+        posz[p] += EDGE_LENGTH*random(0.02);
       }
     }
 
-//  for (int tl=1; tl<N_TRIANGLES; tl++) {
-//    float shiftX = deltaZ*0.1*tl;
-//    for (int j=0; j<3; j++) {
-//      int p = id(tl,j);
-//      posx[p] += shiftX;
-//    }
-//  }
-
-    for (int i=0; i<N_PARTICLES; i++) {
-      velx[i] = 0.0;
-      vely[i] = 0.0;
-      velz[i] = 0.0;
+    float omega = EDGE_TWIST_RATE_OMEGA;
+    for (int l=0; l<N_TRIANGLES; l++) {
+      for (int j=0; j<3; j++) {
+        int p = id(l,j);
+        if ( l%2==0 )
+          angle = (TWO_PI/3)*j;
+        else
+          angle = (TWO_PI/3)*j + TWO_PI/6;
+        velx[p] = -ROPE_RADIUS*omega*sin(angle);
+        vely[p] =  ROPE_RADIUS*omega*cos(angle);
+//        velx[p] = 0.0;
+//        vely[p] = 0.0;
+        velz[p] = 0.0;
+      }
     }
   }
 
-  void shiftCenterOfGravityToOrigin()
-  {
-    float cogx = 0.0;  // center of gravity
-    float cogy = 0.0;
-    float cogz = 0.0;
-
-    for (int p=0; p<N_PARTICLES; p++) {
-      cogx += posx[p];
-      cogy += posy[p];
-      cogz += posz[p];
-    }
-    cogx /= float(N_PARTICLES);
-    cogy /= float(N_PARTICLES);
-    cogz /= float(N_PARTICLES);
-
-    for (int p=0; p<N_PARTICLES; p++) {
-      posx[p] -= cogx;
-      posy[p] -= cogy;
-      posz[p] -= cogz;
-    }
-  }
 
   void upperBoundaryConfiguration(float time, Vec3[] ans)
   {
-    float angle = EDGE_TWIST_RATE_OMEGA * time;
+    float angle0 = EDGE_TWIST_RATE_OMEGA * time;
 
     for (int j=0; j<3; j++) {
-      Vec3 basic = new Vec3(getBasicTriangleKind01Coord(j));
-      float x0 = basic.x;
-      float y0 = basic.y;
-      float z0 = basic.z;
-      float x =  cos(angle)*x0 + sin(angle)*y0;
-      float y = -sin(angle)*x0 + cos(angle)*y0;
-      ans[j] = new Vec3(x,y,z0);
+      float angle = angle0 + (TWO_PI/3)*j;
+      float x = ROPE_RADIUS*cos(angle);
+      float y = ROPE_RADIUS*sin(angle);
+      float z = 0.0;
+      ans[j] = new Vec3(x,y,z);
     }
   }
 
@@ -262,8 +123,6 @@ class Particles
   Particles()
   {
     initialConfiguration();
-
-    // shiftCenterOfGravityToOrigin();
 
     for (int nt=0; nt<N_TRIANGLES; nt++) {
       for (int j=0; j<3; j++) {
@@ -348,7 +207,7 @@ class Particles
         float y = posy[p];
         float z = posz[p];
         translate(mapx(x), mapy(y), mapz(z));
-        sphere(3);
+        sphere(1);
       popMatrix();
     }
   }

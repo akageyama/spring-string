@@ -16,7 +16,7 @@ import peasy.PeasyCam;
 PeasyCam cam;
 
 
-final int N_TRIANGLES = 14;
+final int N_TRIANGLES = 50;
 final int N_PARTICLES = N_TRIANGLES*3;
 final float ROPE_MASS = 0.01;
 final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
@@ -26,11 +26,13 @@ final float ROPE_LENGTH = 1.0;
 final float TRIANGLE_NATURAL_SEPARATION = ROPE_LENGTH / (N_TRIANGLES-1);
 final float EDGE_LENGTH = TRIANGLE_NATURAL_SEPARATION * sqrt(3.0/2.0);
 
+final float ROPE_RADIUS = EDGE_LENGTH / sqrt(3.0);
+
 final float EDGE_ELONGATION_CUT_LIMIT = EDGE_LENGTH*1.2;
 
 final float SOUND_SPEED = EDGE_LENGTH / SPRING_CHAR_PERIOD;
 final float SOUND_WAVE_TURN_OVER_TIME = ROPE_LENGTH / SOUND_SPEED;
-final float EDGE_TWIST_TIME = SOUND_WAVE_TURN_OVER_TIME * 0.5;
+final float EDGE_TWIST_TIME = SOUND_WAVE_TURN_OVER_TIME * 0.2;
 final float EDGE_TWIST_RATE_OMEGA = PI*2 / EDGE_TWIST_TIME;
 
 float time = 0.0;
@@ -112,11 +114,11 @@ void integrate()
 
 void draw() {
 
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<200; i++) {
       integrate();
     }
 
-    if ( step%100 == 0 ) {
+    if ( step%400 == 0 ) {
       println("step=", step, " time=", time,
               " friction=", frictionFlag,
               " energy=", motion.totalEnergy());
