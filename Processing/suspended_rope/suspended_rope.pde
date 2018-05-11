@@ -35,12 +35,14 @@ final float SOUND_WAVE_TURN_OVER_TIME = ROPE_LENGTH / SOUND_SPEED;
 final float EDGE_TWIST_TIME = SOUND_WAVE_TURN_OVER_TIME * 0.2;
 final float EDGE_TWIST_RATE_OMEGA = PI*2 / EDGE_TWIST_TIME;
 
+int drawTimeSkip = 128;
+
 float time = 0.0;
 int step = 0;
 float dt = SPRING_CHAR_PERIOD*0.01;
 
 boolean frictionFlag = false;
-final float FRICTION_COEFF = 0.0001;
+final float FRICTION_COEFF = 0.001;
 
 final float GRAVITY_ACCELERATION = 9.80665;
 
@@ -114,13 +116,14 @@ void integrate()
 
 void draw() {
 
-    for (int i=0; i<200; i++) {
+    for (int i=0; i<drawTimeSkip; i++) {
       integrate();
     }
 
-    if ( step%400 == 0 ) {
+    if ( step%50 == 0 ) {
       println("step=", step, " time=", time,
               " friction=", frictionFlag,
+              " timeSkip=", drawTimeSkip,
               " energy=", motion.totalEnergy());
     }
 
@@ -138,6 +141,13 @@ void draw() {
 
 void keyPressed() {
   switch (key) {
+  case 'a':
+    drawTimeSkip *= 2;
+    break;
+  case 'd':
+    drawTimeSkip /= 2;
+    if ( drawTimeSkip<0 ) drawTimeSkip = 1;
+    break;
   case 'f':
     frictionFlag = !frictionFlag;
     break;

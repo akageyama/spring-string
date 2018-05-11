@@ -115,6 +115,8 @@ class Particles
       float x = ROPE_RADIUS*cos(angle);
       float y = ROPE_RADIUS*sin(angle);
       float z = 0.0;
+//      x += ROPE_RADIUS*(random(0.10)-0.05);
+//      y += ROPE_RADIUS*(random(0.10)-0.05);
       ans[j] = new Vec3(x,y,z);
     }
   }
