@@ -33,6 +33,84 @@ class Motion
     }
   }
 
+  void zeroset(int n, Vec3[] v)
+  {
+    for (int i=0; i<n; i++) {
+      v[i] = new Vec3(0.0, 0.0, 0.0); 
+    }
+  }
+
+  void getForceSpring(float[] posx,
+                      float[] posy,
+                      float[] posz,
+                      Vec3[] force)
+  {
+    for (int l=0; l<N_TRIANGLES; l++) {
+      for (int j=0; j<3; j++) {
+        int p = particles.id(l,j);
+        int[] splist = new int[6];
+        splist = particles.getConnectedSpingListForThisParticle(p);
+
+        Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
+
+        int numCounterpart
+            = particles.numberOfConnectedSpringsToThisParticle(p);
+        for (int s=0; s<numCounterpart; s++) {
+          SpringElement aSpring = springs.element[splist[s]];
+          Vec3 pullForceFromTheSpring = aSpring.getPullForce(p,posx,
+                                                               posy,
+                                                               posz);
+          forceSum.add(pullForceFromTheSpring);
+        }
+        force[p] = forceSum;
+      }
+    }
+  }
+
+  void getForceFriction(float[] velx,
+                        float[] vely,
+                        float[] velz,
+                        Vec3[] force)
+  {
+    for (int p=0; p<N_PARTICLES; p++) {
+      force[p].x = -FRICTION_COEFF*velx[p];
+      force[p].y = -FRICTION_COEFF*vely[p];
+      force[p].z = -FRICTION_COEFF*velz[p];
+    }
+  }
+
+
+  void getForceGravity(float[] posx,
+                       float[] posy,
+                       float[] posz,
+                       Vec3[] force)
+  {
+    for (int p=0; p<N_PARTICLES; p++) {
+     force[p].x = 0.0;
+     force[p].y = -GRAVITY_ACCELERATION*PARTICLE_MASS;
+     force[p].z = 0.0;
+    }
+  }
+
+  void getForceTension(float[] posx,
+                       float[] posy,
+                       float[] posz,
+                       Vec3[] force)
+  {
+    for (int k=0; k<2; k++) {
+      int l = (N_TRIANGLES-1)*k;
+      for (int j=0; j<3; j++) {
+        int p = particles.id(l,j);
+        if (k==0) {
+          force[p].x = -0.01*SPRING_CONST*(posx[p] + ROPE_LENGTH/2);
+        }
+        else {
+          force[p].x = -0.01*SPRING_CONST*(posx[p] - ROPE_LENGTH/2);
+        }
+      }
+    }
+  }
+
 
   void equationOfMotion(float posx[],
                         float posy[],
@@ -50,129 +128,39 @@ class Motion
   {
     float dtm = dt / PARTICLE_MASS;
 
-      //  u2=2
-      //   o
-      //        .     upper triangle
-      //     .      .
-      //               o
-      //       .     .
-      //           .
-      //         o u1=0          vertex index
-      //                           in a triangle
+    Vec3[] forceSpring   = new Vec3[N_PARTICLES];
+    Vec3[] forceFriction = new Vec3[N_PARTICLES];
+    Vec3[] forceTension  = new Vec3[N_PARTICLES];
+    Vec3[] forceGravity  = new Vec3[N_PARTICLES];
 
-      //            o m2=2           o 2
-      //         .                  . .
-      //      .      .             .   .
-      //    o                     .     .
-      //  me=0  .      .         o . . . o
-      //            .           0         1
-      //                o m1=1
-      //  l2=2
-      //   o
-      //        .
-      //     .      .
-      //               o
-      //       .     .
-      //           .    lower triangle
-      //         o
-      //        l1=0
+    zeroset(N_PARTICLES,forceSpring);
+    zeroset(N_PARTICLES,forceTension);
+    zeroset(N_PARTICLES,forceFriction);
+    zeroset(N_PARTICLES,forceGravity);
 
-
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip both ends.
-      for (int me=0; me<3; me++) {
-        int pid = particles.id(tl,me); // particle id
-        int[] splist = new int[6];
-        splist = particles.getConnectedSpingListForThisParticle(pid);
-
-        Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
-
-        int numCounterpart
-            = particles.numberOfConnectedSpringsToThisParticle(pid);
-        for (int s=0; s<numCounterpart; s++) {
-          SpringElement aSpring = springs.element[splist[s]];
-          Vec3 pullForceFromTheSpring = aSpring.getPullForce(pid,posx,
-                                                                 posy,
-                                                                 posz);
-          forceSum.add(pullForceFromTheSpring);
-        }
-
-        // gravity force
-        Vec3 gForce = new Vec3(0.0,
-                               -GRAVITY_ACCELERATION*PARTICLE_MASS,
-                               0.0);
-        forceSum.add(gForce);
-
-        // viscous force
-        if ( frictionFlag ) {
-          float vForceX = -FRICTION_COEFF*velx[pid];
-          float vForceY = -FRICTION_COEFF*vely[pid];
-          float vForceZ = -FRICTION_COEFF*velz[pid];
-          forceSum.add(vForceX, vForceY, vForceZ);
-        }
-
-        dposx[pid] = velx[pid] * dt;
-        dposy[pid] = vely[pid] * dt;
-        dposz[pid] = velz[pid] * dt;
-        dvelx[pid] = forceSum.x * dtm;
-        dvely[pid] = forceSum.y * dtm;
-        dvelz[pid] = forceSum.z * dtm;
-      }
+    getForceSpring(posx, posy, posz, forceSpring);
+    if ( frictionFlag ) {
+      getForceFriction(velx, vely, velz, forceFriction);
     }
+    getForceTension(posx, posy, posz, forceTension);
+    getForceGravity(posx, posy, posz, forceGravity);
 
-    for (int l=0; l<2; l++) {
-      int tl = l*(N_TRIANGLES-1);
-      for (int me=0; me<3; me++) {
-        int pid = particles.id(tl,me);
-        int[] splist = new int[6];
-        splist = particles.getConnectedSpingListForThisParticle(pid);
+    for (int l=1; l<N_TRIANGLES-1; l++) {
+      for (int j=0; j<3; j++) {
+        int p = particles.id(l,j); // particle id
+        Vec3 force = new Vec3(0.0, 0.0, 0.0);
 
-        Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
+        force.add(forceSpring[p]);
+        force.add(forceFriction[p]);
+        force.add(forceTension[p]);
+        force.add(forceGravity[p]);
 
-        int numCounterpart
-            = particles.numberOfConnectedSpringsToThisParticle(pid);
-        for (int s=0; s<numCounterpart; s++) {
-          SpringElement aSpring = springs.element[splist[s]];
-          Vec3 pullForceFromTheSpring = aSpring.getPullForce(pid,posx,
-                                                                 posy,
-                                                                 posz);
-          forceSum.add(pullForceFromTheSpring);
-        }
-
-//      // gravity force
-//      Vec3 gForce = new Vec3(0.0,
-//                             -GRAVITY_ACCELERATION*PARTICLE_MASS,
-//                             0.0);
-//      forceSum.add(gForce);
-//
-        // tension of the end points
-        float tensionX;
-        if (l==0) {
-          tensionX = -0.01*SPRING_CONST*(posx[pid] + ROPE_LENGTH/2);
-        }
-        else {
-          tensionX = -0.01*SPRING_CONST*(posx[pid] - ROPE_LENGTH/2);
-        }
-
-        forceSum.add(tensionX, 0.0, 0.0);
-
-        // viscous force
-        if ( frictionFlag ) {
-          float vForceX = -FRICTION_COEFF*velx[pid];
-//        float vForceY = -FRICTION_COEFF*vely[pid];
-//        float vForceZ = -FRICTION_COEFF*velz[pid];
-//        forceSum.add(vForceX, vForceY, vForceZ);
-          forceSum.add(vForceX, 0.0, 0.0);
-        }
-
-        forceSum.y = 0.0;
-        forceSum.z = 0.0;
-
-        dposx[pid] = velx[pid] * dt;
-        dposy[pid] = vely[pid] * dt;
-        dposz[pid] = velz[pid] * dt;
-        dvelx[pid] = forceSum.x * dtm;
-        dvely[pid] = forceSum.y * dtm;
-        dvelz[pid] = forceSum.z * dtm;
+        dposx[p] = velx[p] * dt;
+        dposy[p] = vely[p] * dt;
+        dposz[p] = velz[p] * dt;
+        dvelx[p] = force.x * dtm;
+        dvely[p] = force.y * dtm;
+        dvelz[p] = force.z * dtm;
       }
     }
 
@@ -409,43 +397,43 @@ class Motion
     // weighted sum
     for (int tl=0; tl<N_TRIANGLES; tl++) {
       for (int j=0; j<3; j++) { // three verteces in a triangle.
-        int pid = particles.id(tl,j);
-        posxwork[pid] =            posxprev[pid] + (
-                           ONE_SIXTH*dposx1[pid]
-                         + ONE_THIRD*dposx2[pid]
-                         + ONE_THIRD*dposx3[pid]
-                         + ONE_SIXTH*dposx4[pid]
-                         );
-        posywork[pid] =            posyprev[pid] + (
-                           ONE_SIXTH*dposy1[pid]
-                         + ONE_THIRD*dposy2[pid]
-                         + ONE_THIRD*dposy3[pid]
-                         + ONE_SIXTH*dposy4[pid]
-                         );
-        poszwork[pid] =            poszprev[pid] + (
-                           ONE_SIXTH*dposz1[pid]
-                         + ONE_THIRD*dposz2[pid]
-                         + ONE_THIRD*dposz3[pid]
-                         + ONE_SIXTH*dposz4[pid]
-                         );
-        velxwork[pid] =            velxprev[pid] + (
-                           ONE_SIXTH*dvelx1[pid]
-                         + ONE_THIRD*dvelx2[pid]
-                         + ONE_THIRD*dvelx3[pid]
-                         + ONE_SIXTH*dvelx4[pid]
-                         );
-        velywork[pid] =            velyprev[pid] + (
-                           ONE_SIXTH*dvely1[pid]
-                         + ONE_THIRD*dvely2[pid]
-                         + ONE_THIRD*dvely3[pid]
-                         + ONE_SIXTH*dvely4[pid]
-                         );
-        velzwork[pid] =            velzprev[pid] + (
-                           ONE_SIXTH*dvelz1[pid]
-                         + ONE_THIRD*dvelz2[pid]
-                         + ONE_THIRD*dvelz3[pid]
-                         + ONE_SIXTH*dvelz4[pid]
-                         );
+        int p = particles.id(tl,j);
+        posxwork[p] =            posxprev[p] + (
+                         ONE_SIXTH*dposx1[p]
+                       + ONE_THIRD*dposx2[p]
+                       + ONE_THIRD*dposx3[p]
+                       + ONE_SIXTH*dposx4[p]
+                       );
+        posywork[p] =            posyprev[p] + (
+                         ONE_SIXTH*dposy1[p]
+                       + ONE_THIRD*dposy2[p]
+                       + ONE_THIRD*dposy3[p]
+                       + ONE_SIXTH*dposy4[p]
+                       );
+        poszwork[p] =            poszprev[p] + (
+                         ONE_SIXTH*dposz1[p]
+                       + ONE_THIRD*dposz2[p]
+                       + ONE_THIRD*dposz3[p]
+                       + ONE_SIXTH*dposz4[p]
+                       );
+        velxwork[p] =            velxprev[p] + (
+                         ONE_SIXTH*dvelx1[p]
+                       + ONE_THIRD*dvelx2[p]
+                       + ONE_THIRD*dvelx3[p]
+                       + ONE_SIXTH*dvelx4[p]
+                       );
+        velywork[p] =            velyprev[p] + (
+                         ONE_SIXTH*dvely1[p]
+                       + ONE_THIRD*dvely2[p]
+                       + ONE_THIRD*dvely3[p]
+                       + ONE_SIXTH*dvely4[p]
+                       );
+        velzwork[p] =            velzprev[p] + (
+                         ONE_SIXTH*dvelz1[p]
+                       + ONE_THIRD*dvelz2[p]
+                       + ONE_THIRD*dvelz3[p]
+                       + ONE_SIXTH*dvelz4[p]
+                       );
       }
     }
     boundaryCondition(angle,
