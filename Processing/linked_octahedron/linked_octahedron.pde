@@ -14,13 +14,14 @@ import peasy.PeasyCam;
 
 PeasyCam cam;
 
-//final int N_TRIANGLES = 100;
+//final int N_TRIANGLES = 50;
  final int N_TRIANGLES = 30;
 // final int N_TRIANGLES = 4;
 final int N_PARTICLES = N_TRIANGLES*3;
 final float ROPE_MASS = 0.1;
 final float PARTICLE_MASS = ROPE_MASS / N_PARTICLES;
-final float SPRING_CHAR_PERIOD = 0.001; // second
+//final float SPRING_CHAR_PERIOD = 0.001; // second
+final float SPRING_CHAR_PERIOD = 0.01; // second
 final float SPRING_CHAR_OMEGA = PI*2 / SPRING_CHAR_PERIOD;
 final float SPRING_CHAR_OMEGA_SQ = PI*2 / SPRING_CHAR_PERIOD;
 final float SPRING_CONST = PARTICLE_MASS * SPRING_CHAR_OMEGA_SQ;
@@ -42,7 +43,7 @@ final float FRICTION_COEFF = 0.0001;
 
 final float SOUND_SPEED = EDGE_LENGTH / SPRING_CHAR_PERIOD;
 final float SOUND_WAVE_TURN_OVER_TIME = ROPE_LENGTH / SOUND_SPEED;
-final float EDGE_TWIST_TIME = SOUND_WAVE_TURN_OVER_TIME * 60;
+final float EDGE_TWIST_TIME = SOUND_WAVE_TURN_OVER_TIME * 5;
 final float EDGE_TWIST_RATE_OMEGA = PI*2 / EDGE_TWIST_TIME;
 
 // final float GRAVITY_ACCELERATION = 9.80665;
@@ -118,7 +119,8 @@ void integrate()
 void draw() {
 
 //    for (int i=0; i<200; i++) {
-    for (int i=0; i<2000; i++) {
+//    for (int i=0; i<100; i++) {
+    for (int i=0; i<1; i++) {
       integrate();
     }
 

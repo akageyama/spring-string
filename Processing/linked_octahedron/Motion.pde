@@ -112,6 +112,65 @@ class Motion
   }
 
 
+  void calcCenters(float[] posx,
+                   float[] posy,
+                   float[] posz,
+                   Vec3[] centers)
+  {
+    Vec3[] triangleVerts = new Vec3[3];
+
+    for (int l=0; l<N_TRIANGLES; l++) {
+      for (int j=0; j<3; j++) {
+        int p = particles.id(l,j);
+println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
+        triangleVerts[j] = new Vec3(posx[p], posy[p], posz[p]);
+      }
+      centers[l] = calcCenter(triangleVerts);
+    }
+  }
+
+
+  void getForceSelfInteraction(float[] posx,
+                               float[] posy,
+                               float[] posz,
+                               Vec3[] force)
+  {
+    Vec3[] centers = new Vec3[N_TRIANGLES];
+    final float R2 = TUBE_RADIUS*2;
+    final float R3 = TUBE_RADIUS*20;
+
+    calcCenters(posx, posy, posz, centers);
+    for (int j=0; j<3; j++) force[j] = new Vec3();
+
+    for (int l=0; l<N_TRIANGLES; l++) {
+      Vec3 sum = new Vec3(0.0, 0.0, 0.0);
+      for (int l2=0; l2<N_TRIANGLES; l2++) {
+        if ( abs(l-l2) <= 5 ) continue; // skip neighbhors.
+        float dista = centers[l].distance(centers[l2]);
+  println(" cent(l)=", centers[l].x, centers[l].y, centers[l].z);
+  println(" cet2(l2)=", centers[l2].x, centers[l2].y, centers[l2].z);
+  println("   dista = ", dista);
+          //      l       l2
+          //      o <---- o
+        if ( dista < R3 ) {
+          Vec3 unitVecFromRightToLeft = centers[l].ssubtract(centers[l2]);
+          unitVecFromRightToLeft.normalize();
+//          float amp = 0.001*pow(R2/dista,13);
+          float amp = 0.0;
+  println("   R2, dista, amp = ", R2, dista, amp);
+          Vec3 f = unitVecFromRightToLeft.mmultiply(amp);
+  println("l,l2,f=",l,l2,f.x,f.y,f.z);
+          sum.add(f);
+        }
+      }
+      for (int j=0; j<3; j++) {
+        int p = particles.id(l,j);
+        force[p] = sum;
+      }
+    }
+  }
+
+
   void equationOfMotion(float posx[],
                         float posy[],
                         float posz[],
@@ -128,22 +187,26 @@ class Motion
   {
     float dtm = dt / PARTICLE_MASS;
 
+    boolean[][] contact = new boolean[N_TRIANGLES][N_TRIANGLES];
+
     Vec3[] forceSpring   = new Vec3[N_PARTICLES];
     Vec3[] forceFriction = new Vec3[N_PARTICLES];
     Vec3[] forceTension  = new Vec3[N_PARTICLES];
-    Vec3[] forceGravity  = new Vec3[N_PARTICLES];
+//    Vec3[] forceGravity  = new Vec3[N_PARTICLES];
+    Vec3[] forceContact  = new Vec3[N_PARTICLES];
 
     zeroset(N_PARTICLES,forceSpring);
     zeroset(N_PARTICLES,forceTension);
     zeroset(N_PARTICLES,forceFriction);
-    zeroset(N_PARTICLES,forceGravity);
+//    zeroset(N_PARTICLES,forceGravity);
 
     getForceSpring(posx, posy, posz, forceSpring);
     if ( frictionFlag ) {
       getForceFriction(velx, vely, velz, forceFriction);
     }
     getForceTension(posx, posy, posz, forceTension);
-    getForceGravity(posx, posy, posz, forceGravity);
+//    getForceGravity(posx, posy, posz, forceGravity);
+    getForceSelfInteraction(posx, posy, posz, forceContact);
 
     for (int l=1; l<N_TRIANGLES-1; l++) {
       for (int j=0; j<3; j++) {
@@ -153,7 +216,8 @@ class Motion
         force.add(forceSpring[p]);
         force.add(forceFriction[p]);
         force.add(forceTension[p]);
-        force.add(forceGravity[p]);
+//        force.add(forceGravity[p]);
+        force.add(forceContact[p]);
 
         dposx[p] = velx[p] * dt;
         dposy[p] = vely[p] * dt;
@@ -542,8 +606,9 @@ class Motion
     for (int p=0; p<N_PARTICLES; p++)
       ysum += particles.posy[p];
 
-    float potentialGravity = PARTICLE_MASS*GRAVITY_ACCELERATION*ysum;
-    return kinetic + potentialSpring + potentialGravity;
+//    float potentialGravity = PARTICLE_MASS*GRAVITY_ACCELERATION*ysum;
+//    return kinetic + potentialSpring + potentialGravity;
+    return kinetic + potentialSpring;
   }
 
 }
