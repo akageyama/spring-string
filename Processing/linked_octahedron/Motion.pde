@@ -36,7 +36,7 @@ class Motion
   void zeroset(int n, Vec3[] v)
   {
     for (int i=0; i<n; i++) {
-      v[i] = new Vec3(0.0, 0.0, 0.0); 
+      v[i] = new Vec3(0.0, 0.0, 0.0);
     }
   }
 
@@ -122,7 +122,6 @@ class Motion
     for (int l=0; l<N_TRIANGLES; l++) {
       for (int j=0; j<3; j++) {
         int p = particles.id(l,j);
-println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
         triangleVerts[j] = new Vec3(posx[p], posy[p], posz[p]);
       }
       centers[l] = calcCenter(triangleVerts);
@@ -136,32 +135,34 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
                                Vec3[] force)
   {
     Vec3[] centers = new Vec3[N_TRIANGLES];
-    final float R2 = TUBE_RADIUS*2;
-    final float R3 = TUBE_RADIUS*20;
+    final float R2 = ROPE_RADIUS*2;
+
+    final float F_REF = SPRING_CONST*(SPRING_CUT_LIMIT_LENGTH-EDGE_LENGTH);
 
     calcCenters(posx, posy, posz, centers);
-    for (int j=0; j<3; j++) force[j] = new Vec3();
+    zeroset(N_PARTICLES, force);
 
     for (int l=0; l<N_TRIANGLES; l++) {
       Vec3 sum = new Vec3(0.0, 0.0, 0.0);
       for (int l2=0; l2<N_TRIANGLES; l2++) {
-        if ( abs(l-l2) <= 5 ) continue; // skip neighbhors.
-        float dista = centers[l].distance(centers[l2]);
-  println(" cent(l)=", centers[l].x, centers[l].y, centers[l].z);
-  println(" cet2(l2)=", centers[l2].x, centers[l2].y, centers[l2].z);
-  println("   dista = ", dista);
-          //      l       l2
-          //      o <---- o
-        if ( dista < R3 ) {
+        Vec3 f = new Vec3(0.0, 0.0, 0.0);
+        if ( abs(l-l2)>=5 ) {
+          float dista = centers[l].distance(centers[l2]);
           Vec3 unitVecFromRightToLeft = centers[l].ssubtract(centers[l2]);
           unitVecFromRightToLeft.normalize();
-//          float amp = 0.001*pow(R2/dista,13);
-          float amp = 0.0;
-  println("   R2, dista, amp = ", R2, dista, amp);
-          Vec3 f = unitVecFromRightToLeft.mmultiply(amp);
-  println("l,l2,f=",l,l2,f.x,f.y,f.z);
-          sum.add(f);
+
+          if ( dista <= R2 ) {
+            float amp = F_REF;
+            f = unitVecFromRightToLeft.mmultiply(amp);
+          }
+          else {
+            //      l       l2
+            //      o <---- o
+            float amp = F_REF*pow(R2/dista,6);
+            f = unitVecFromRightToLeft.mmultiply(amp);
+          }
         }
+        sum.add(f);
       }
       for (int j=0; j<3; j++) {
         int p = particles.id(l,j);
@@ -187,28 +188,26 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
   {
     float dtm = dt / PARTICLE_MASS;
 
-    boolean[][] contact = new boolean[N_TRIANGLES][N_TRIANGLES];
-
     Vec3[] forceSpring   = new Vec3[N_PARTICLES];
     Vec3[] forceFriction = new Vec3[N_PARTICLES];
     Vec3[] forceTension  = new Vec3[N_PARTICLES];
-//    Vec3[] forceGravity  = new Vec3[N_PARTICLES];
+    Vec3[] forceGravity  = new Vec3[N_PARTICLES];
     Vec3[] forceContact  = new Vec3[N_PARTICLES];
 
     zeroset(N_PARTICLES,forceSpring);
     zeroset(N_PARTICLES,forceTension);
     zeroset(N_PARTICLES,forceFriction);
-//    zeroset(N_PARTICLES,forceGravity);
+    zeroset(N_PARTICLES,forceGravity);
 
     getForceSpring(posx, posy, posz, forceSpring);
     if ( frictionFlag ) {
       getForceFriction(velx, vely, velz, forceFriction);
     }
     getForceTension(posx, posy, posz, forceTension);
-//    getForceGravity(posx, posy, posz, forceGravity);
+    getForceGravity(posx, posy, posz, forceGravity);
     getForceSelfInteraction(posx, posy, posz, forceContact);
 
-    for (int l=1; l<N_TRIANGLES-1; l++) {
+    for (int l=0; l<N_TRIANGLES; l++) {
       for (int j=0; j<3; j++) {
         int p = particles.id(l,j); // particle id
         Vec3 force = new Vec3(0.0, 0.0, 0.0);
@@ -216,7 +215,7 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
         force.add(forceSpring[p]);
         force.add(forceFriction[p]);
         force.add(forceTension[p]);
-//        force.add(forceGravity[p]);
+        force.add(forceGravity[p]);
         force.add(forceContact[p]);
 
         dposx[p] = velx[p] * dt;
@@ -226,25 +225,31 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
         dvely[p] = force.y * dtm;
         dvelz[p] = force.z * dtm;
       }
+      if (l==0 || l==N_TRIANGLES-1) {
+        for (int j=0; j<3; j++) {
+          int p = particles.id(l,j);
+          dposy[p] = 0.0;
+          dposz[p] = 0.0;
+          dvely[p] = 0.0;
+          dvelz[p] = 0.0;
+        }
+      }
     }
 
   }
 
 
-  void boundaryCondition(float angle,
-                         float[] posx,
-                         float[] posy,
-                         float[] posz,
-                         float[] velx,
-                         float[] vely,
-                         float[] velz)
+  void edgeTwist(float angle,
+                 float[] posx,
+                 float[] posy,
+                 float[] posz)
   {
     Vec3[] verts = new Vec3[3];
 
-    for (int l=0; l<2; l++) {
-      int tl = l*(N_TRIANGLES-1);
+    for (int k=0; k<2; k++) {
+      int l = k*(N_TRIANGLES-1);
       for (int j=0; j<3; j++) {
-        int p = particles.id(tl,j);
+        int p = particles.id(l,j);
         verts[j] = new Vec3(posx[p], posy[p], posz[p]);
       }
 
@@ -254,7 +259,7 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
         twist(-angle/2, verts);
 
       for (int j=0; j<3; j++) {
-        int p = particles.id(tl,j);
+        int p = particles.id(l,j);
         Vec3 vert = verts[j];
         posx[p] = vert.x;
         posy[p] = vert.y;
@@ -352,13 +357,10 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
     //step 2
     time += 0.5*dt;
     float angle = EDGE_TWIST_RATE_OMEGA * dt * 0.5;
-    boundaryCondition(angle,
-                      posxwork,
-                      posywork,
-                      poszwork,
-                      velxwork,
-                      velywork,
-                      velzwork);
+    edgeTwist(angle,
+              posxwork,
+              posywork,
+              poszwork);
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -394,13 +396,10 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
                         0.5);
 
     //step 3
-    boundaryCondition(angle,
-                      posxwork,
-                      posywork,
-                      poszwork,
-                      velxwork,
-                      velywork,
-                      velzwork);
+    edgeTwist(angle,
+              posxwork,
+              posywork,
+              poszwork);
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -438,13 +437,10 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
     //step 4
     time += 0.5*dt;
     angle = EDGE_TWIST_RATE_OMEGA * dt * 0.5;
-    boundaryCondition(angle,
-                      posxwork,
-                      posywork,
-                      poszwork,
-                      velxwork,
-                      velywork,
-                      velzwork);
+    edgeTwist(angle,
+              posxwork,
+              posywork,
+              poszwork);
     equationOfMotion(posxwork,
                      posywork,
                      poszwork,
@@ -500,13 +496,10 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
                        );
       }
     }
-    boundaryCondition(angle,
-                      posxwork,
-                      posywork,
-                      poszwork,
-                      velxwork,
-                      velywork,
-                      velzwork);
+    edgeTwist(angle,
+              posxwork,
+              posywork,
+              poszwork);
 
     arrayCopy(posxwork, particles.posx);
     arrayCopy(posywork, particles.posy);
@@ -528,7 +521,7 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
 
   Vec3 calcCenter(Vec3[] verts)
   {
-    Vec3 center = new Vec3(0.0, 0.0, 0.0);
+    Vec3 center = new Vec3();
     for (int j=0; j<3; j++) {
       center.add(verts[j]);
     }
@@ -537,28 +530,17 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
     return center;
   }
 
-  Vec3 vecSubtract(Vec3 a, Vec3 b) // a-b
-  {
-    Vec3 ans = new Vec3(0.0, 0.0, 0.0);
-
-    ans.x = a.x - b.x;
-    ans.y = a.y - b.y;
-    ans.z = a.z - b.z;
-
-    return ans;
-  }
-
 
   void calcUnitVectors(Vec3 center,
                        Vec3[] verts,
                        Vec3[] unitVec)
   {
-    Vec3 vecC0 = vecSubtract(verts[0], center);
-    Vec3 vecC1 = vecSubtract(verts[1], center);
+    Vec3 vecC0 = verts[0].ssubtract(center);
+    Vec3 vecC1 = verts[1].ssubtract(center);
 
     Vec3 v = vecC0;
     v.normalize();
-    unitVec[0] = new Vec3(v);
+    unitVec[0] = v;
 
     v = vecC0.crossProduct(vecC1); // along the axis
     v.normalize();
@@ -570,7 +552,6 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
   void twist(float angle, Vec3[] verts)
   {
     Vec3 center;
-    Vec3 vecC0, vecC1;
     Vec3[] unitVec = new Vec3[2];
 
     center = calcCenter(verts);
@@ -578,8 +559,8 @@ println(" l,j,xyz=", l,j,posx[p],posy[p],posz[p]);
                     verts,
                     unitVec);
 
-    float deltaPhi = (PI*2) / 3;
-    float r = TUBE_RADIUS;
+    float deltaPhi = TWO_PI / 3;
+    float r = ROPE_RADIUS;
 
     for (int j=0; j<3; j++) {
       float phi = angle + j*deltaPhi;

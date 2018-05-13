@@ -49,16 +49,16 @@ class Vec3 {
   }
 
   void subtract(Vec3 v) {
-    this.x -= x;
-    this.y -= y;
-    this.z -= z;
+    this.x -= v.x;
+    this.y -= v.y;
+    this.z -= v.z;
   }
 
   Vec3 ssubtract(Vec3 v) {
     Vec3 ans = new Vec3();
-    ans.x = this.x - x;
-    ans.y = this.y - y;
-    ans.z = this.z - z;
+    ans.x = this.x - v.x;
+    ans.y = this.y - v.y;
+    ans.z = this.z - v.z;
     return ans;
   }
 

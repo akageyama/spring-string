@@ -8,8 +8,6 @@ class Particles
   float[] vely = new float[N_PARTICLES];
   float[] velz = new float[N_PARTICLES];
 
-  float saveEndPointInitialPhase;
-
   int[][] connectedSpringList = new int[N_PARTICLES][6];
             // each particle are connected with 6 springs.
             //
@@ -52,20 +50,16 @@ class Particles
         //
 
 
-  float getEndPointInitialPhase() {
-    return saveEndPointInitialPhase;
-  }
-
   void init()
   {
     float deltaX = TRIANGLE_NATURAL_SEPARATION;
-    float deltaPhi = PI*2 / 3;
+    float deltaPhi = TWO_PI / 3;
     float phi;
 
-    for (int tl=0; tl<N_TRIANGLES; tl++) {
-      float shiftX = - ROPE_LENGTH/2 + deltaX * tl;
+    for (int l=0; l<N_TRIANGLES; l++) {
+      float shiftX = - ROPE_LENGTH/2 + deltaX * l;
       //
-      //         z  even tl              z  odd tl
+      //         z  even l               z  odd l
       //    j=1  |                       |
       //      o  |               j=1     |     o
       //       \ |                o      |   . j=0
@@ -76,30 +70,35 @@ class Particles
       //  j=2 o                         j=2 o
       //
       for (int j=0; j<3; j++) {
-        int p = id(tl,j);
-        if ( tl%2==0 )
+        int p = id(l,j);
+        if ( l%2==0 )
           phi = deltaPhi*j;
         else
           phi = deltaPhi*(j+0.5);
 
         posx[p] = shiftX;
-        posy[p] = TUBE_RADIUS*cos(phi);
-        posz[p] = TUBE_RADIUS*sin(phi);
+        posy[p] = ROPE_RADIUS*cos(phi);
+        posz[p] = ROPE_RADIUS*sin(phi);
 
-        posx[p] += random(TUBE_RADIUS*0.01);
-        posy[p] += random(TUBE_RADIUS*0.01);
-        posz[p] += random(TUBE_RADIUS*0.01);
-
-        if ( tl==N_TRIANGLES-1 && j==0 ) {
-          saveEndPointInitialPhase = phi;
-        }
+        //posx[p] += (random(ROPE_RADIUS*0.01)-0.05);
+        //posy[p] += (random(ROPE_RADIUS*0.01)-0.05);
+        //posz[p] += (random(ROPE_RADIUS*0.01)-0.05);
       }
     }
 
-    for (int i=0; i<N_PARTICLES; i++) {
-      velx[i] = 0.0;
-      vely[i] = 0.0;
-      velz[i] = 0.0;
+    for (int l=1; l<N_TRIANGLES-1; l++) {
+      for (int j=0; j<3; j++) {
+        int p = id(l,j);
+        if ( l%2==0 )
+          phi = deltaPhi*j;
+        else
+          phi = deltaPhi*(j+0.5);
+        float zfactor = posx[p] / (ROPE_LENGTH / 2);
+        float vphi = ROPE_RADIUS*EDGE_TWIST_RATE_OMEGA*zfactor;
+        velx[p] = 0.0;
+        vely[p] = -vphi*sin(phi);
+        velz[p] =  vphi*cos(phi);
+      }
     }
   }
 
@@ -201,6 +200,22 @@ class Particles
       sum += 0.5*PARTICLE_MASS*vsq;
     }
     return sum;
+  }
+
+  void resetDt()
+  {
+    float vmax = 0.0;
+    for (int p=0; p<N_PARTICLES; p++) {
+      float vv = sqrt(velx[p]*velx[p]
+                     +vely[p]*vely[p]
+                     +velz[p]*velz[p]);
+      if (vv>vmax) vmax = vv;
+    }
+    float factor = 0.01;
+    float dTvmax = factor * EDGE_LENGTH / vmax;
+    dt = min(DT_REF, dTvmax);
+    if (step%100==0)
+      println(" dtref, dtv, dt = ", DT_REF, dTvmax, dt);
   }
 
 }

@@ -22,7 +22,7 @@ class SpringElement
                     float[] posy,
                     float[] posz)
   {
-    Vec3 force = new Vec3(0.0, 0.0, 0.0);
+    Vec3 force = new Vec3();
 
     float ax = posx[alpha];
     float ay = posy[alpha];

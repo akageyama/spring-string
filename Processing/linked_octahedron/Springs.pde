@@ -45,19 +45,19 @@ class Springs
     float spc = SPRING_CONST;
 
     int sCtr = 0; // spring counter
-    for (int tl=0; tl<N_TRIANGLES; tl++) { // for "hirizontal" triangles.
-      int pId0 = particles.id(tl,0); // 1st vertex in the triangle
-      int pId1 = particles.id(tl,1); // 2nd
-      int pId2 = particles.id(tl,2); // 3rd
+    for (int l=0; l<N_TRIANGLES; l++) { // for "hirizontal" triangles.
+      int pId0 = particles.id(l,0); // 1st vertex in the triangle
+      int pId1 = particles.id(l,1); // 2nd
+      int pId2 = particles.id(l,2); // 3rd
 
       register(spc, sCtr++, pId0, pId1);
       register(spc, sCtr++, pId1, pId2);
       register(spc, sCtr++, pId2, pId0);
     }
-    for (int tl=1; tl<N_TRIANGLES; tl++) { // skip the lowest layer.
+    for (int l=1; l<N_TRIANGLES; l++) { // skip the lowest layer.
       for (int me=0; me<3; me++) {
         //
-        // when tl=even
+        // when l=even
         //
         // each vertex in the layer 'S' has two
         // springs connecting to two vertices
@@ -68,7 +68,7 @@ class Springs
         //             0     1     2    upper layer
         //        .   / \   / \   /
         //         \ /   \ /   \ /
-        //        . 0 x x 1 x x 2 .    tl (even layer)
+        //        . 0 x x 1 x x 2 .    l (even layer)
         //         / \   / \   / \
         //        .   \ /   \ /   \
         //             0     1     2    lower layer
@@ -86,7 +86,7 @@ class Springs
         //       |  k1   k2   me   k2
         //
         //
-        // when tl=odd
+        // when l=odd
         //
         //       same layer    lower layer
         //            /  \     /   \
@@ -101,15 +101,15 @@ class Springs
         int k1 = (me+1) % 3;
         int k2 = (me+2) % 3;
 
-        int myPid = particles.id(tl,me);
+        int myPid = particles.id(l,me);
 
-        if ( tl%2==0 ) {
-          register(spc, sCtr++, myPid, particles.id(tl-1,me)); // lower layer
-          register(spc, sCtr++, myPid, particles.id(tl-1,k2)); // lower layer
+        if ( l%2==0 ) {
+          register(spc, sCtr++, myPid, particles.id(l-1,me)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(l-1,k2)); // lower layer
         }
         else {
-          register(spc, sCtr++, myPid, particles.id(tl-1,me)); // lower layer
-          register(spc, sCtr++, myPid, particles.id(tl-1,k1)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(l-1,me)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(l-1,k1)); // lower layer
         }
       }
     }
