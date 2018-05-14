@@ -587,9 +587,14 @@ module diagno
   integer, parameter :: ids_xyz1 = 11
   integer, parameter :: ids_xyz2 = 12
   integer, parameter :: ids_xyz3 = 13
+  character(len=*), parameter :: dirname = './data/'
+  character(len=*), parameter :: filebase1 = dirname//'xyz1.'
+  character(len=*), parameter :: filebase2 = dirname//'xyz2.'
+  character(len=*), parameter :: filebase3 = dirname//'xyz3.'
 contains
 !
   subroutine diagno_first
+    open(ids_memo,file=dirname//'memo.txt',status='replace')
     print *, '--------------------------------------------'
     print *, '   imax = ', imax
     print *, '   jmax = ', jmax
@@ -661,16 +666,19 @@ contains
 
     ctr = i2c(counter)
 
-    call printline(1,ids_xyz1)
-    call printline(2,ids_xyz2)
-    call printline(3,ids_xyz3)
+    call printline(1,ids_xyz1,filebase1//ctr)
+    call printline(2,ids_xyz2,filebase2//ctr)
+    call printline(3,ids_xyz3,filebase3//ctr)
  
     print *,' position data counter = ', ctr
   end subroutine diagno_position
 !
-  subroutine printline(j,ids)
+  subroutine printline(j,ids,filename)
     integer, intent(in) :: j, ids
+    character(len=*), intent(in) :: filename
     integer :: i
+
+    open(ids,file=trim(filename),status='replace')
 
     write(ids,*)'#  '
     write(ids,*)'# nloop = ',nloop, '  time = ', time
@@ -681,6 +689,8 @@ contains
         write(ids,*) '## ',tube%pos(i,j,1), tube%pos(i,j,2), tube%pos(i,j,3)
       end if
     end do
+
+    close(ids)
   end subroutine printline
 !
   function i2c(i)
@@ -715,8 +725,8 @@ program twisting_tube
   call diagno_position
   call init_perturb
 
-! do while ( nloop < 10000000 )
-  do while ( nloop < 200000 )
+  do while ( nloop < 10000000 )
+!  do while ( nloop < 200000 )
     call motion_advance
     time = time + dt
     nloop = nloop + 1
