@@ -2,20 +2,20 @@
 class Motion
 {
 
-  Vec3 calcCenter(Vec3[] verts)
+  Vec3 calcCenter(int size, Vec3[] verts)
   {
     float sumx = 0.0;
     float sumy = 0.0;
     float sumz = 0.0;
-    for (int j=0; j<3; j++) {
+    for (int j=0; j<size; j++) {
       sumx += verts[j].x;
       sumy += verts[j].y;
       sumz += verts[j].z;
     }
 
-    Vec3 ans = new Vec3(sumx/3,
-                        sumy/3,
-                        sumz/3);
+    Vec3 ans = new Vec3(sumx/size,
+                        sumy/size,
+                        sumz/size);
     return ans;
   }
 
@@ -24,7 +24,7 @@ class Motion
   {
     Vec3[] ans = new Vec3[3];
 
-    Vec3 centerOfEndTriangle = new Vec3(calcCenter(triangleVerts));
+    Vec3 centerOfEndTriangle = new Vec3(calcCenter(3, triangleVerts));
     for (int j=0; j<3; j++) {
       ans[j] = triangleVerts[j].ssubtract(centerOfEndTriangle);
     }

@@ -60,23 +60,23 @@ class Particles
           angle = (TWO_PI/3)*j;
         else
           angle = (TWO_PI/3)*j + TWO_PI/6;
-        pos[p].x = -STICK_LENGTH/2 + deltaX*l;
-        pos[p].y =  STICK_RADIUS*cos(angle);
-        pos[p].z =  STICK_RADIUS*sin(angle);
+        Vec3 newpos = new Vec3(-STICK_LENGTH/2 + deltaX*l,
+                                STICK_RADIUS*cos(angle),
+                                STICK_RADIUS*sin(angle));
+        pos[p] = new Vec3(newpos);
 
         // random perturbation to add noise.
-        pos[p].x += EDGE_LENGTH*(random(0.02)-0.01);
-        pos[p].y += EDGE_LENGTH*(random(0.02)-0.01);
-        pos[p].z += EDGE_LENGTH*(random(0.02)-0.01);
+        Vec3 perturb = new Vec3(EDGE_LENGTH*(random(0.02)-0.01),
+                                EDGE_LENGTH*(random(0.02)-0.01),
+                                EDGE_LENGTH*(random(0.02)-0.01));
+        pos[p].add(perturb);
       }
     }
 
     for (int l=0; l<N_TRIANGLES; l++) {
       for (int j=0; j<3; j++) {
         int p = id(l,j);
-        vel[p].x = 0.0;
-        vel[p].y = 0.0;
-        vel[p].z = 0.0;
+        vel[p] = new Vec3(0.0);
       }
     }
   }
