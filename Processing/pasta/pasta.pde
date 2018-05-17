@@ -31,8 +31,7 @@ final float STICK_RADIUS = EDGE_LENGTH / sqrt(3.0);
 final float EDGE_ELONGATION_CUT_LIMIT = EDGE_LENGTH*1.2;
 
 final float SOUND_SPEED = EDGE_LENGTH / SPRING_CHAR_PERIOD;
-final float EDGE_MOVE_SPEED = SOUND_SPEED * 0.01;
-float float EDGE_ROTATION_OMEGA = EDGE_MOVE_SPEED / EDGE_LENGTH;
+final float STICK_END_POINT_MOVE_SPEED = SOUND_SPEED * 0.01;
 
 int drawTimeSkip = 128;
 
@@ -106,7 +105,6 @@ void setup() {
 void integrate()
 {
   motion.rungeKutta();
-
   step += 1;
 }
 
@@ -128,7 +126,6 @@ void draw() {
     pushMatrix();
       //translate(width/2,height/2);
       rotateX(PI/2);
-
       draw_axes_xyz();
       motion.display();
     popMatrix();

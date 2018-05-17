@@ -2,50 +2,86 @@
 class Motion
 {
 
+  Vec3 calcCenter(Vec3[] verts)
+  {
+    float sumx = 0.0;
+    float sumy = 0.0;
+    float sumz = 0.0;
+    for (int j=0; j<3; j++) {
+      sumx += verts[j].x;
+      sumy += verts[j].y;
+      sumz += verts[j].z;
+    }
+
+    Vec3 ans = new Vec3(sumx/3,
+                        sumy/3,
+                        sumz/3);
+    return ans;
+  }
+
+
+  Vec3[] calcRelativeVecFromCenter(Vec3[] triangleVerts)
+  {
+    Vec3[] ans = new Vec3[3];
+
+    Vec3 centerOfEndTriangle = new Vec3(calcCenter(triangleVerts));
+    for (int j=0; j<3; j++) {
+      ans[j] = triangleVerts[j].ssubtract(centerOfEndTriangle);
+    }
+    return ans;
+  }
+
+  void boundaryCondition(float tim, Vec3[] pos)
+  {
+    Vec3[] triangleVerts = new Vec3[3];
+    Vec3[] relativeVecFromCenter = new Vec3[3];
+
+    float endPointPositionX;
+
+    for (int l=0; l<2; l++) {
+      if (l==0)
+        endPointPositionX = - STICK_LENGTH/2
+                            + STICK_END_POINT_MOVE_SPEED*tim;
+      else
+        endPointPositionX =   STICK_LENGTH/2
+                            - STICK_END_POINT_MOVE_SPEED*tim;
+      int t = (N_TRIANGLES-1)*l;
+      for (int j=0; j<3; j++) {
+        int p = particles.id(t,j);
+        triangleVerts[j] = pos[p];
+      }
+      relativeVecFromCenter = calcRelativeVecFromCenter(triangleVerts);
+      for (int j=0; j<3; j++) {
+        int p = particles.id(t,l);
+        pos[p].x = endPointPositionX + relativeVecFromCenter[j].x;
+      }
+    }
+  }
+
   void rungeKuttaIncrement(int num,
-                           float[] posx,
-                           float[] posy,
-                           float[] posz,
-                           float[] velx,
-                           float[] vely,
-                           float[] velz,
-                           float[] posx1,
-                           float[] posy1,
-                           float[] posz1,
-                           float[] velx1,
-                           float[] vely1,
-                           float[] velz1,
-                           float[] dposx,
-                           float[] dposy,
-                           float[] dposz,
-                           float[] dvelx,
-                           float[] dvely,
-                           float[] dvelz,
+                           Vec3[] pos,
+                           Vec3[] vel,
+                           Vec3[] pos1,
+                           Vec3[] vel1,
+                           Vec3[] dpos,
+                           Vec3[] dvel,
                            float factor)
   {
     for (int p=0; p<num; p++) {
-      posx[p] = posx1[p] + factor*dposx[p];
-      posy[p] = posy1[p] + factor*dposy[p];
-      posz[p] = posz1[p] + factor*dposz[p];
-      velx[p] = velx1[p] + factor*dvelx[p];
-      vely[p] = vely1[p] + factor*dvely[p];
-      velz[p] = velz1[p] + factor*dvelz[p];
+      pos[p].x = pos1[p].x + factor*dpos[p].x;
+      pos[p].y = pos1[p].y + factor*dpos[p].y;
+      pos[p].z = pos1[p].z + factor*dpos[p].z;
+      vel[p].x = vel1[p].x + factor*dvel[p].x;
+      vel[p].y = vel1[p].y + factor*dvel[p].y;
+      vel[p].z = vel1[p].z + factor*dvel[p].z;
     }
   }
 
 
-  void equationOfMotion(float posx[],
-                        float posy[],
-                        float posz[],
-                        float velx[],
-                        float vely[],
-                        float velz[],
-                        float dposx[],
-                        float dposy[],
-                        float dposz[],
-                        float dvelx[],
-                        float dvely[],
-                        float dvelz[],
+  void equationOfMotion(Vec3[] pos,
+                        Vec3[] vel,
+                        Vec3[] dpos,
+                        Vec3[] dvel,
                         float dt)
   {
     float dtm = dt / PARTICLE_MASS;
@@ -78,60 +114,46 @@ class Motion
       //        l1=0
 
 
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) { // triangle layer. skip the top end.
-      for (int me=0; me<3; me++) {
-        int pid = particles.id(tl,me); // particle id
+    for (int t=1; t<N_TRIANGLES-1; t++) { // skip end triangles.
+      for (int j=0; j<3; j++) {
+        int p = particles.id(t,j);
         int[] splist = new int[6];
-        splist = particles.getConnectedSpingListForThisParticle(pid);
+        splist = particles.getConnectedSpingListForThisParticle(p);
 
         Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
         int numCounterpart
-            = particles.numberOfConnectedSpringsToThisParticle(pid);
+            = particles.numberOfConnectedSpringsToThisParticle(p);
         for (int s=0; s<numCounterpart; s++) {
           SpringElement aSpring = springs.element[splist[s]];
-          Vec3 pullForceFromTheSpring = aSpring.getPullForce(pid,posx,
-                                                                 posy,
-                                                                 posz);
+          Vec3 pullForceFromTheSpring = aSpring.getPullForce(p,pos);
           forceSum.add(pullForceFromTheSpring);
         }
 
-        // viscous force
+        // friction force
         if ( frictionFlag ) {
-          float vForceX = -FRICTION_COEFF*velx[pid];
-          float vForceY = -FRICTION_COEFF*vely[pid];
-          float vForceZ = -FRICTION_COEFF*velz[pid];
-          forceSum.add(vForceX, vForceY, vForceZ);
+          Vec3 frictionForce = vel[p].mmultiply(-FRICTION_COEFF);
+          forceSum.add(frictionForce);
         }
 
-        dposx[pid] = velx[pid] * dt;
-        dposy[pid] = vely[pid] * dt;
-        dposz[pid] = velz[pid] * dt;
-        dvelx[pid] = forceSum.x * dtm;
-        dvely[pid] = forceSum.y * dtm;
-        dvelz[pid] = forceSum.z * dtm;
+        dpos[p].x = (vel[p].x) * dt;
+        dpos[p].y = (vel[p].y) * dt;
+        dpos[p].z = (vel[p].z) * dt;
+
+        dvel[p].x = forceSum.x * dtm;
+        dvel[p].y = forceSum.y * dtm;
+        dvel[p].z = forceSum.z * dtm;
       }
     }
   }
 
-
-  void boundaryCondition(float t,
-                         float[] posx,
-                         float[] posy,
-                         float[] posz)
+  void copyIt(Vec3[] from, Vec3[] to)
   {
-    Vec3[] verts = new Vec3[3];
-
-    particles.boundaryConfiguration(t, verts);
-
-    for (int j=0; j<3; j++) { // three vertices at the bottom.
-      int tl = 0; // triangle layer
-      int p = particles.id(tl,j);
-      posx[p] = verts[j].x;
-      posy[p] = verts[j].y;
-      posz[p] = verts[j].z;
+    for (int p=0; p<N_PARTICLES; p++) {
+      to[p].x = from[p].x;
+      to[p].y = from[p].y;
+      to[p].z = from[p].z;
     }
   }
-
 
   void rungeKutta()
   {
@@ -139,245 +161,135 @@ class Motion
     final float ONE_THIRD = 1.0/3.0;
     final int NN = N_PARTICLES;
 
-    float[] posxprev = new float[NN];
-    float[] posxwork = new float[NN];
-    float[]   dposx1 = new float[NN];
-    float[]   dposx2 = new float[NN];
-    float[]   dposx3 = new float[NN];
-    float[]   dposx4 = new float[NN];
-    float[] posyprev = new float[NN];
-    float[] posywork = new float[NN];
-    float[]   dposy1 = new float[NN];
-    float[]   dposy2 = new float[NN];
-    float[]   dposy3 = new float[NN];
-    float[]   dposy4 = new float[NN];
-    float[] poszprev = new float[NN];
-    float[] poszwork = new float[NN];
-    float[]   dposz1 = new float[NN];
-    float[]   dposz2 = new float[NN];
-    float[]   dposz3 = new float[NN];
-    float[]   dposz4 = new float[NN];
-    float[] velxprev = new float[NN];
-    float[] velxwork = new float[NN];
-    float[]   dvelx1 = new float[NN];
-    float[]   dvelx2 = new float[NN];
-    float[]   dvelx3 = new float[NN];
-    float[]   dvelx4 = new float[NN];
-    float[] velyprev = new float[NN];
-    float[] velywork = new float[NN];
-    float[]   dvely1 = new float[NN];
-    float[]   dvely2 = new float[NN];
-    float[]   dvely3 = new float[NN];
-    float[]   dvely4 = new float[NN];
-    float[] velzprev = new float[NN];
-    float[] velzwork = new float[NN];
-    float[]   dvelz1 = new float[NN];
-    float[]   dvelz2 = new float[NN];
-    float[]   dvelz3 = new float[NN];
-    float[]   dvelz4 = new float[NN];
+    Vec3[] posprev = new Vec3[NN];
+    Vec3[] poswork = new Vec3[NN];
+    Vec3[]   dpos1 = new Vec3[NN];
+    Vec3[]   dpos2 = new Vec3[NN];
+    Vec3[]   dpos3 = new Vec3[NN];
+    Vec3[]   dpos4 = new Vec3[NN];
+    Vec3[] velprev = new Vec3[NN];
+    Vec3[] velwork = new Vec3[NN];
+    Vec3[]   dvel1 = new Vec3[NN];
+    Vec3[]   dvel2 = new Vec3[NN];
+    Vec3[]   dvel3 = new Vec3[NN];
+    Vec3[]   dvel4 = new Vec3[NN];
 
-    arrayCopy(particles.posx, posxprev);
-    arrayCopy(particles.posy, posyprev);
-    arrayCopy(particles.posz, poszprev);
-    arrayCopy(particles.velx, velxprev);
-    arrayCopy(particles.vely, velyprev);
-    arrayCopy(particles.velz, velzprev);
+    copyIt(particles.pos, posprev);
+    copyIt(particles.vel, velprev);
 
     //step 1
-    equationOfMotion(posxprev,
-                     posyprev,
-                     poszprev,
-                     velxprev,
-                     velyprev,
-                     velzprev,
-                     dposx1,
-                     dposy1,
-                     dposz1,
-                     dvelx1,
-                     dvely1,
-                     dvelz1,
+    equationOfMotion(posprev,
+                     velprev,
+                     dpos1,
+                     dvel1,
                      dt);
     rungeKuttaIncrement(NN,
-                        posxwork,
-                        posywork,
-                        poszwork,
-                        velxwork,
-                        velywork,
-                        velzwork,
-                        posxprev,
-                        posyprev,
-                        poszprev,
-                        velxprev,
-                        velyprev,
-                        velzprev,
-                        dposx1,
-                        dposy1,
-                        dposz1,
-                        dvelx1,
-                        dvely1,
-                        dvelz1,
+                        poswork,
+                        velwork,
+                        posprev,
+                        velprev,
+                        dpos1,
+                        dvel1,
                         0.5);
 
     //step 2
     time += 0.5*dt;
     boundaryCondition(time,
-                      posxwork,
-                      posywork,
-                      poszwork);
-    equationOfMotion(posxwork,
-                     posywork,
-                     poszwork,
-                     velxwork,
-                     velywork,
-                     velzwork,
-                     dposx2,
-                     dposy2,
-                     dposz2,
-                     dvelx2,
-                     dvely2,
-                     dvelz2,
+                      poswork);
+    equationOfMotion(poswork,
+                     velwork,
+                     dpos2,
+                     dvel2,
                      dt);
     rungeKuttaIncrement(NN,
-                        posxwork,
-                        posywork,
-                        poszwork,
-                        velxwork,
-                        velywork,
-                        velzwork,
-                        posxprev,
-                        posyprev,
-                        poszprev,
-                        velxprev,
-                        velyprev,
-                        velzprev,
-                        dposx2,
-                        dposy2,
-                        dposz2,
-                        dvelx2,
-                        dvely2,
-                        dvelz2,
+                        poswork,
+                        velwork,
+                        posprev,
+                        velprev,
+                        dpos2,
+                        dvel2,
                         0.5);
 
     //step 3
     boundaryCondition(time,
-                      posxwork,
-                      posywork,
-                      poszwork);
-    equationOfMotion(posxwork,
-                     posywork,
-                     poszwork,
-                     velxwork,
-                     velywork,
-                     velzwork,
-                     dposx3,
-                     dposy3,
-                     dposz3,
-                     dvelx3,
-                     dvely3,
-                     dvelz3,
+                      poswork);
+    equationOfMotion(poswork,
+                     velwork,
+                     dpos3,
+                     dvel3,
                      dt);
     rungeKuttaIncrement(NN,
-                        posxwork,
-                        posywork,
-                        poszwork,
-                        velxwork,
-                        velywork,
-                        velzwork,
-                        posxprev,
-                        posyprev,
-                        poszprev,
-                        velxprev,
-                        velyprev,
-                        velzprev,
-                        dposx3,
-                        dposy3,
-                        dposz3,
-                        dvelx3,
-                        dvely3,
-                        dvelz3,
+                        poswork,
+                        velwork,
+                        posprev,
+                        velprev,
+                        dpos3,
+                        dvel3,
                         1.0);
 
     //step 4
     time += 0.5*dt;
     boundaryCondition(time,
-                      posxwork,
-                      posywork,
-                      poszwork);
-    equationOfMotion(posxwork,
-                     posywork,
-                     poszwork,
-                     velxwork,
-                     velywork,
-                     velzwork,
-                     dposx4,
-                     dposy4,
-                     dposz4,
-                     dvelx4,
-                     dvely4,
-                     dvelz4,
+                      poswork);
+    equationOfMotion(poswork,
+                     velwork,
+                     dpos4,
+                     dvel4,
                      dt);
     // weighted sum
-    for (int tl=1; tl<N_TRIANGLES-1; tl++) {
+    for (int t=1; t<N_TRIANGLES-1; t++) {
       for (int j=0; j<3; j++) { // three verteces in a triangle.
-        int pid = particles.id(tl,j);
-        posxwork[pid] =            posxprev[pid] + (
-                           ONE_SIXTH*dposx1[pid]
-                         + ONE_THIRD*dposx2[pid]
-                         + ONE_THIRD*dposx3[pid]
-                         + ONE_SIXTH*dposx4[pid]
-                         );
-        posywork[pid] =            posyprev[pid] + (
-                           ONE_SIXTH*dposy1[pid]
-                         + ONE_THIRD*dposy2[pid]
-                         + ONE_THIRD*dposy3[pid]
-                         + ONE_SIXTH*dposy4[pid]
-                         );
-        poszwork[pid] =            poszprev[pid] + (
-                           ONE_SIXTH*dposz1[pid]
-                         + ONE_THIRD*dposz2[pid]
-                         + ONE_THIRD*dposz3[pid]
-                         + ONE_SIXTH*dposz4[pid]
-                         );
-        velxwork[pid] =            velxprev[pid] + (
-                           ONE_SIXTH*dvelx1[pid]
-                         + ONE_THIRD*dvelx2[pid]
-                         + ONE_THIRD*dvelx3[pid]
-                         + ONE_SIXTH*dvelx4[pid]
-                         );
-        velywork[pid] =            velyprev[pid] + (
-                           ONE_SIXTH*dvely1[pid]
-                         + ONE_THIRD*dvely2[pid]
-                         + ONE_THIRD*dvely3[pid]
-                         + ONE_SIXTH*dvely4[pid]
-                         );
-        velzwork[pid] =            velzprev[pid] + (
-                           ONE_SIXTH*dvelz1[pid]
-                         + ONE_THIRD*dvelz2[pid]
-                         + ONE_THIRD*dvelz3[pid]
-                         + ONE_SIXTH*dvelz4[pid]
-                         );
+        int p = particles.id(t,j);
+        poswork[p].x =           posprev[p].x + (
+                         ONE_SIXTH*dpos1[p].x
+                       + ONE_THIRD*dpos2[p].x
+                       + ONE_THIRD*dpos3[p].x
+                       + ONE_SIXTH*dpos4[p].x
+                       );
+        poswork[p].y =           posprev[p].y + (
+                         ONE_SIXTH*dpos1[p].y
+                       + ONE_THIRD*dpos2[p].y
+                       + ONE_THIRD*dpos3[p].y
+                       + ONE_SIXTH*dpos4[p].y
+                       );
+        poswork[p].z =           posprev[p].z + (
+                         ONE_SIXTH*dpos1[p].z
+                       + ONE_THIRD*dpos2[p].z
+                       + ONE_THIRD*dpos3[p].z
+                       + ONE_SIXTH*dpos4[p].z
+                       );
+        velwork[p].x =           velprev[p].x + (
+                         ONE_SIXTH*dvel1[p].x
+                       + ONE_THIRD*dvel2[p].x
+                       + ONE_THIRD*dvel3[p].x
+                       + ONE_SIXTH*dvel4[p].x
+                       );
+        velwork[p].y =           velprev[p].y + (
+                         ONE_SIXTH*dvel1[p].y
+                       + ONE_THIRD*dvel2[p].y
+                       + ONE_THIRD*dvel3[p].y
+                       + ONE_SIXTH*dvel4[p].y
+                       );
+        velwork[p].z =           velprev[p].z + (
+                         ONE_SIXTH*dvel1[p].z
+                       + ONE_THIRD*dvel2[p].z
+                       + ONE_THIRD*dvel3[p].z
+                       + ONE_SIXTH*dvel4[p].z
+                       );
       }
     }
     boundaryCondition(time,
-                      posxwork,
-                      posywork,
-                      poszwork);
+                      poswork);
 
-    arrayCopy(posxwork, particles.posx);
-    arrayCopy(posywork, particles.posy);
-    arrayCopy(poszwork, particles.posz);
-    arrayCopy(velxwork, particles.velx);
-    arrayCopy(velywork, particles.vely);
-    arrayCopy(velzwork, particles.velz);
+    copyIt(poswork, particles.pos);
+    copyIt(velwork, particles.vel);
   }
 
 
   void display()
   {
     particles.display();
-    springs.display(particles.posx,
-                    particles.posy,
-                    particles.posz);
+    springs.display(particles.pos);
   }
 
 
@@ -385,16 +297,8 @@ class Motion
   float totalEnergy()
   {
     float kinetic = particles.energy();
-    float potentialSpring  = springs.energy(particles.posx,
-                                            particles.posy,
-                                            particles.posz);
-
-    float ysum=0.0;
-    for (int p=0; p<N_PARTICLES; p++)
-      ysum += particles.posy[p];
-
-    float potentialGravity = PARTICLE_MASS*GRAVITY_ACCELERATION*ysum;
-    return kinetic + potentialSpring + potentialGravity;
+    float potential = springs.energy(particles.pos);
+    return kinetic + potential;
   }
 
 }

@@ -35,24 +35,24 @@ class Springs
 
   Springs(float characteristicPeriod)
   {
-    float omega = PI*2 / characteristicPeriod;
+    float omega = TWO_PI / characteristicPeriod;
     float spc = PARTICLE_MASS * omega * omega;
               // spc = spring constant:  omega^2 = spc / mass
 
     int sCtr = 0; // spring counter
-    for (int tl=0; tl<N_TRIANGLES; tl++) { // for "hirizontal" triangles.
-      int pId0 = particles.id(tl,0); // 1st vertex in the triangle
-      int pId1 = particles.id(tl,1); // 2nd
-      int pId2 = particles.id(tl,2); // 3rd
+    for (int t=0; t<N_TRIANGLES; t++) { // for "hirizontal" triangles.
+      int pId0 = particles.id(t,0); // 1st vertex in the triangle
+      int pId1 = particles.id(t,1); // 2nd
+      int pId2 = particles.id(t,2); // 3rd
 
       register(spc, sCtr++, pId0, pId1);
       register(spc, sCtr++, pId1, pId2);
       register(spc, sCtr++, pId2, pId0);
     }
-    for (int tl=1; tl<N_TRIANGLES; tl++) { // skip the lowest layer.
+    for (int t=1; t<N_TRIANGLES; t++) { // skip the lowest layer.
       for (int me=0; me<3; me++) {
         //
-        // when tl=even
+        // when t=even
         //
         // each vertex in the layer 'S' has two
         // springs connecting to two vertices
@@ -63,7 +63,7 @@ class Springs
         //             0     1     2    upper layer
         //        .   / \   / \   /
         //         \ /   \ /   \ /
-        //        . 0 x x 1 x x 2 .    tl (even layer)
+        //        . 0 x x 1 x x 2 .    t (even layer)
         //         / \   / \   / \
         //        .   \ /   \ /   \
         //             0     1     2    lower layer
@@ -81,7 +81,7 @@ class Springs
         //       |  k1   k2   me   k2
         //
         //
-        // when tl=odd
+        // when t=odd
         //
         //       same layer    lower layer
         //            /  \     /   \
@@ -96,15 +96,15 @@ class Springs
         int k1 = (me+1) % 3;
         int k2 = (me+2) % 3;
 
-        int myPid = particles.id(tl,me);
+        int myPid = particles.id(t,me);
 
-        if ( tl%2==0 ) {
-          register(spc, sCtr++, myPid, particles.id(tl-1,me)); // lower layer
-          register(spc, sCtr++, myPid, particles.id(tl-1,k2)); // lower layer
+        if ( t%2==0 ) {
+          register(spc, sCtr++, myPid, particles.id(t-1,me)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(t-1,k2)); // lower layer
         }
         else {
-          register(spc, sCtr++, myPid, particles.id(tl-1,me)); // lower layer
-          register(spc, sCtr++, myPid, particles.id(tl-1,k1)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(t-1,me)); // lower layer
+          register(spc, sCtr++, myPid, particles.id(t-1,k1)); // lower layer
         }
       }
     }
@@ -127,27 +127,22 @@ class Springs
   }
 
 
-  void display(float[] posx,
-               float[] posy,
-               float[] posz)
+  void display(Vec3[] pos)
   {
     stroke(150, 100, 70);
 
     for (int s=0; s<N_SPRINGS; s++) {
-      element[s].display(posx, posy, posz);
+      element[s].display(pos);
     }
   }
 
-  float energy(float[] posx,
-               float[] posy,
-               float[] posz)
+  float energy(Vec3[] pos)
   {
     float sum = 0.0;
     for (int s=0; s<N_SPRINGS; s++) {
-      sum += element[s].energy(posx,posy,posz);
+      sum += element[s].energy(pos);
     }
     return sum;
   }
-
 
 }

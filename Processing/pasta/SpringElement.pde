@@ -17,19 +17,16 @@ class SpringElement
   }
 
 
-  Vec3 getPullForce(int particleId,
-                    float[] posx,
-                    float[] posy,
-                    float[] posz)
+  Vec3 getPullForce(int particleId, Vec3[] pos)
   {
-    Vec3 force = new Vec3(0.0, 0.0, 0.0);
+    Vec3 force = new Vec3(0.0);
 
-    float ax = posx[alpha];
-    float ay = posy[alpha];
-    float az = posz[alpha];
-    float bx = posx[beta ];
-    float by = posy[beta ];
-    float bz = posz[beta ];
+    float ax = pos[alpha].x;
+    float ay = pos[alpha].y;
+    float az = pos[alpha].z;
+    float bx = pos[beta ].x;
+    float by = pos[beta ].y;
+    float bz = pos[beta ].z;
 
     float distance = dist(ax, ay, az, bx, by, bz);
 
@@ -41,13 +38,13 @@ class SpringElement
     if (particleId==alpha) {
       force = new Vec3((bx-ax)/distance,
                        (by-ay)/distance,
-                       (bz-az)/distance);  // unit vector from alpha to beta.
+                       (bz-az)/distance);  // unit vec from alpha to beta.
       force.multiply(pullForceAmplitude);
     }
     else if (particleId==beta) {
       force = new Vec3((ax-bx)/distance,
                        (ay-by)/distance,
-                       (az-bz)/distance);  // unit vector from beta to alpha.
+                       (az-bz)/distance);  // unit vec from beta to alpha.
       force.multiply(pullForceAmplitude);
     }
     else {
@@ -58,32 +55,28 @@ class SpringElement
   }
 
 
-  void display(float[] posx,
-               float[] posy,
-               float[] posz)
+  void display(Vec3[] pos)
   {
     if ( springConst > 0.0) {
-      float ax = mapx(posx[alpha]);
-      float ay = mapy(posy[alpha]);
-      float az = mapz(posz[alpha]);
-      float bx = mapx(posx[beta]);
-      float by = mapy(posy[beta]);
-      float bz = mapz(posz[beta]);
+      float ax = mapx(pos[alpha].x);
+      float ay = mapy(pos[alpha].y);
+      float az = mapz(pos[alpha].z);
+      float bx = mapx(pos[beta ].x);
+      float by = mapy(pos[beta ].y);
+      float bz = mapz(pos[beta ].z);
       line(ax,ay,az,bx,by,bz);
     }
   }
 
 
-  float energy(float[] posx,
-               float[] posy,
-               float[] posz)
+  float energy(Vec3[] pos)
   {
-    float ax = posx[alpha];
-    float ay = posy[alpha];
-    float az = posz[alpha];
-    float bx = posx[beta ];
-    float by = posy[beta ];
-    float bz = posz[beta ];
+    float ax = pos[alpha].x;
+    float ay = pos[alpha].y;
+    float az = pos[alpha].z;
+    float bx = pos[beta ].x;
+    float by = pos[beta ].y;
+    float bz = pos[beta ].z;
 
     float distance = dist(ax, ay, az, bx, by, bz);
     float elongation = distance - EDGE_LENGTH;

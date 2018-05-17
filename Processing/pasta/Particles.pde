@@ -3,12 +3,8 @@ class Particles
 {
   float twistAngle=0.0;
 
-  float[] posx = new float[N_PARTICLES];
-  float[] posy = new float[N_PARTICLES];
-  float[] posz = new float[N_PARTICLES];
-  float[] velx = new float[N_PARTICLES];
-  float[] vely = new float[N_PARTICLES];
-  float[] velz = new float[N_PARTICLES];
+  Vec3[] pos = new Vec3[N_PARTICLES];
+  Vec3[] vel = new Vec3[N_PARTICLES];
 
   int[][] connectedSpringList = new int[N_PARTICLES][6];
             // each particle are connected with 6 springs.
@@ -52,19 +48,6 @@ class Particles
         //
 
 
-  void boundaryConfiguration(float t, Vec3[] verts)
-  {
-    float r = STICK_LENGTH;
-    float leftEdgeX = -STICK_LENGTH/2;
-    float leftEdgeY = 0.0;
-    float x = leftEdgeX + r*cos(EDGE_ROTATION_OMEGA*t);
-    float y = leftEdgeY + r*cos(EDGE_ROTATION_OMEGA*t);
-    for (int j=0; j<3; j++) {
-
-
-    }
-  }
-
   void initialConfiguration()
   {
     float deltaX = STICK_LENGTH / (N_TRIANGLES-1);
@@ -77,22 +60,23 @@ class Particles
           angle = (TWO_PI/3)*j;
         else
           angle = (TWO_PI/3)*j + TWO_PI/6;
-        posx[p] = -STICK_LENGTH/2 + deltaX*l
-        posy[p] = STICK_RADIUS*cos(angle);
-        posz[p] = STICK_RADIUS*sin(angle);
+        pos[p].x = -STICK_LENGTH/2 + deltaX*l;
+        pos[p].y =  STICK_RADIUS*cos(angle);
+        pos[p].z =  STICK_RADIUS*sin(angle);
 
-        posx[p] += EDGE_LENGTH*(random(0.02)-0.01);
-        posy[p] += EDGE_LENGTH*(random(0.02)-0.01);
-        posz[p] += EDGE_LENGTH*(random(0.02)-0.01);
+        // random perturbation to add noise.
+        pos[p].x += EDGE_LENGTH*(random(0.02)-0.01);
+        pos[p].y += EDGE_LENGTH*(random(0.02)-0.01);
+        pos[p].z += EDGE_LENGTH*(random(0.02)-0.01);
       }
     }
 
     for (int l=0; l<N_TRIANGLES; l++) {
       for (int j=0; j<3; j++) {
         int p = id(l,j);
-        velx[p] = 0.0;
-        vely[p] = 0.0;
-        velz[p] = 0.0;
+        vel[p].x = 0.0;
+        vel[p].y = 0.0;
+        vel[p].z = 0.0;
       }
     }
   }
@@ -102,11 +86,11 @@ class Particles
   {
     initialConfiguration();
 
-    for (int nt=0; nt<N_TRIANGLES; nt++) {
+    for (int t=0; t<N_TRIANGLES; t++) {
       for (int j=0; j<3; j++) {
-        int pid = id(nt,j); // particle id
-        for (int s=0; s<6; s++) {  // six springs.
-          // each particles is connectd by 6 springs.
+        int pid = id(t,j); // particle id
+        for (int s=0; s<6; s++) {  // springs.
+          // each particles is connectd by 6 springs, in max.
           connectedSpringList[pid][s] = NULL_MARK;
         }
       }
@@ -168,9 +152,7 @@ class Particles
   void connectedSpringsAppend(int particleId, int springid)
   {
     int num = numberOfConnectedSpringsToThisParticle(particleId);
-
     assert num >=0 && num<6;
-
     connectedSpringList[particleId][num] = springid;
   }
 
@@ -180,11 +162,11 @@ class Particles
     fill(100,0,130);
     for (int p=0; p<N_PARTICLES; p++) {
       pushMatrix();
-        float x = posx[p];
-        float y = posy[p];
-        float z = posz[p];
+        float x = pos[p].x;
+        float y = pos[p].y;
+        float z = pos[p].z;
         translate(mapx(x), mapy(y), mapz(z));
-        sphere(1);
+        sphere(2);
       popMatrix();
     }
   }
@@ -194,9 +176,9 @@ class Particles
   {
     float sum = 0.0;
     for (int p=0; p<N_PARTICLES; p++) {
-      float vxsq = pow(velx[p],2);
-      float vysq = pow(vely[p],2);
-      float vzsq = pow(velz[p],2);
+      float vxsq = pow(vel[p].x,2);
+      float vysq = pow(vel[p].y,2);
+      float vzsq = pow(vel[p].z,2);
       float vsq = vxsq + vysq + vzsq;
       sum += 0.5*PARTICLE_MASS*vsq;
     }
