@@ -33,6 +33,9 @@ class SpringElement
     if ( distance >= EDGE_ELONGATION_CUT_LIMIT )
       springConst = 0.0;
 
+    if ( distance <= EDGE_CONTRACTION_CUT_LIMIT )
+      springConst = 0.0;
+
     float pullForceAmplitude = springConst * (distance - EDGE_LENGTH);
 
     if (particleId==alpha) {

@@ -197,7 +197,6 @@ class Motion
                      dpos1,
                      dvel1,
                      dt);
-println("dpos[1] = ", dpos1[1]);
     rungeKuttaIncrement(NN,
                         poswork,
                         velwork,

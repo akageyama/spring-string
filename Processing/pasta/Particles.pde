@@ -65,11 +65,23 @@ class Particles
                                 STICK_RADIUS*sin(angle));
         pos[p] = new Vec3(newpos);
 
+/*
         // random perturbation to add noise.
         Vec3 perturb = new Vec3(EDGE_LENGTH*(random(0.02)-0.01),
                                 EDGE_LENGTH*(random(0.02)-0.01),
                                 EDGE_LENGTH*(random(0.02)-0.01));
         pos[p].add(perturb);
+ */
+
+/*
+        // sinusoidal perturbation
+        float x = -STICK_LENGTH/2 + deltaX*l;
+        float phase = (x/(STICK_LENGTH/2))*(PI/2);
+        Vec3 perturb = new Vec3(0.0,
+                                0.0,
+                                EDGE_LENGTH*0.02*cos(phase));
+        pos[p].add(perturb);
+ */
       }
     }
 
