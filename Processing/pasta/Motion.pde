@@ -52,8 +52,10 @@ class Motion
       }
       relativeVecFromCenter = calcRelativeVecFromCenter(triangleVerts);
       for (int j=0; j<3; j++) {
-        int p = particles.id(t,l);
+        int p = particles.id(t,j);
         pos[p].x = endPointPositionX + relativeVecFromCenter[j].x;
+        pos[p].y =                     relativeVecFromCenter[j].y;
+        pos[p].z =                     relativeVecFromCenter[j].z;
       }
     }
   }
@@ -67,13 +69,21 @@ class Motion
                            Vec3[] dvel,
                            float factor)
   {
+
     for (int p=0; p<num; p++) {
-      pos[p].x = pos1[p].x + factor*dpos[p].x;
-      pos[p].y = pos1[p].y + factor*dpos[p].y;
-      pos[p].z = pos1[p].z + factor*dpos[p].z;
-      vel[p].x = vel1[p].x + factor*dvel[p].x;
-      vel[p].y = vel1[p].y + factor*dvel[p].y;
-      vel[p].z = vel1[p].z + factor*dvel[p].z;
+      pos[p] = new Vec3(pos1[p].x,
+                        pos1[p].y,
+                        pos1[p].z);
+      vel[p] = new Vec3(vel1[p].x,
+                        vel1[p].y,
+                        vel1[p].z);
+
+      pos[p] = new Vec3(pos1[p].x + factor*dpos[p].x,
+                        pos1[p].y + factor*dpos[p].y,
+                        pos1[p].z + factor*dpos[p].z);
+      vel[p] = new Vec3(vel1[p].x + factor*dvel[p].x,
+                        vel1[p].y + factor*dvel[p].y,
+                        vel1[p].z + factor*dvel[p].z);
     }
   }
 
@@ -114,34 +124,40 @@ class Motion
       //        l1=0
 
 
-    for (int t=1; t<N_TRIANGLES-1; t++) { // skip end triangles.
+    for (int t=0; t<N_TRIANGLES; t++) { // skip end triangles.
       for (int j=0; j<3; j++) {
         int p = particles.id(t,j);
-        int[] splist = new int[6];
-        splist = particles.getConnectedSpingListForThisParticle(p);
+//      if ( t==0 || t==N_TRIANGLES-1 ) {
+//        dpos[p] = new Vec3(0.0);
+//        dvel[p] = new Vec3(0.0);
+//      }
+//      else {
+          int[] splist = new int[6];
+          splist = particles.getConnectedSpingListForThisParticle(p);
 
-        Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
-        int numCounterpart
-            = particles.numberOfConnectedSpringsToThisParticle(p);
-        for (int s=0; s<numCounterpart; s++) {
-          SpringElement aSpring = springs.element[splist[s]];
-          Vec3 pullForceFromTheSpring = aSpring.getPullForce(p,pos);
-          forceSum.add(pullForceFromTheSpring);
-        }
+          Vec3 forceSum = new Vec3(0.0, 0.0, 0.0);
+          int numCounterpart
+              = particles.numberOfConnectedSpringsToThisParticle(p);
+          for (int s=0; s<numCounterpart; s++) {
+            SpringElement aSpring = springs.element[splist[s]];
+            Vec3 pullForceFromTheSpring = aSpring.getPullForce(p,pos);
+            forceSum.add(pullForceFromTheSpring);
+          }
 
-        // friction force
-        if ( frictionFlag ) {
-          Vec3 frictionForce = vel[p].mmultiply(-FRICTION_COEFF);
-          forceSum.add(frictionForce);
-        }
+          // friction force
+          if ( frictionFlag ) {
+            Vec3 frictionForce = vel[p].mmultiply(-FRICTION_COEFF);
+            forceSum.add(frictionForce);
+          }
 
-        dpos[p].x = (vel[p].x) * dt;
-        dpos[p].y = (vel[p].y) * dt;
-        dpos[p].z = (vel[p].z) * dt;
 
-        dvel[p].x = forceSum.x * dtm;
-        dvel[p].y = forceSum.y * dtm;
-        dvel[p].z = forceSum.z * dtm;
+          dpos[p] = new Vec3((vel[p].x) * dt,
+                             (vel[p].y) * dt,
+                             (vel[p].z) * dt);
+          dvel[p] = new Vec3(forceSum.x * dtm,
+                             forceSum.y * dtm,
+                             forceSum.z * dtm);
+//      }
       }
     }
   }
@@ -149,9 +165,7 @@ class Motion
   void copyIt(Vec3[] from, Vec3[] to)
   {
     for (int p=0; p<N_PARTICLES; p++) {
-      to[p].x = from[p].x;
-      to[p].y = from[p].y;
-      to[p].z = from[p].z;
+      to[p] = from[p];
     }
   }
 
@@ -183,6 +197,7 @@ class Motion
                      dpos1,
                      dvel1,
                      dt);
+println("dpos[1] = ", dpos1[1]);
     rungeKuttaIncrement(NN,
                         poswork,
                         velwork,
@@ -237,7 +252,7 @@ class Motion
                      dvel4,
                      dt);
     // weighted sum
-    for (int t=1; t<N_TRIANGLES-1; t++) {
+    for (int t=0; t<N_TRIANGLES; t++) {
       for (int j=0; j<3; j++) { // three verteces in a triangle.
         int p = particles.id(t,j);
         poswork[p].x =           posprev[p].x + (
