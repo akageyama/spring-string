@@ -156,8 +156,8 @@ float totalEnergy()
     kineticEnergy += 0.5*BALLS_MASS*(velx*velx+vely*vely);
     
     if ( i>0 ) {
-      float posx0 = ballPosX[i];
-      float posy0 = ballPosY[i];      
+      float posx0 = ballPosX[i-1];
+      float posy0 = ballPosY[i-1];      
       float l = dist(posx,posy,posx0,posy0) - SPRING_NATURAL_LENGTH;
       float lsq = l*l;
       potentialEnergy += 0.5*SPRING_CONST*lsq; 
